@@ -1,0 +1,4 @@
+.students-filters {
+  display: flex;
+  justify-content: space-around;
+}
