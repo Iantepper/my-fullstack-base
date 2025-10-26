@@ -1,22 +1,8 @@
-import axios from 'axios'
+import axios from "axios";
 
 const api = axios.create({
-  baseURL: 'http://localhost:4000',
-  timeout: 1000 * 15, // 15 sec
-})
+  baseURL: import.meta.env.VITE_API_URL || "http://localhost:4000/api",
+  timeout: 5000,
+});
 
-api.interceptors.request.use(
-  (config) => {
-    return config
-  },
-  (error) => Promise.reject(error) // Do something with request error
-)
-
-api.interceptors.response.use(
-  (response) => response.data, // Do something with response data
-  (error) =>
-    // Do something with response error
-    Promise.reject(console.log(error))
-)
-
-export default api
+export default api;
