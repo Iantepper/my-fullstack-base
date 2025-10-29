@@ -8,21 +8,20 @@ import ProfilePage from "../modules/profile/ProfilePage";
 import MainLayout from "../components/layout/MainLayout";
 
 export default function AppRouter() {
-  return (
-    <BrowserRouter>
-      <Routes>
-        {/* Rutas que usan el layout principal */}
-        <Route element={<MainLayout />}>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/mentors" element={<MentorsPage />} />
-          <Route path="/sessions" element={<SessionsPage />} />
-          <Route path="/profile" element={<ProfilePage />} />
-        </Route>
-
-        {/* Rutas públicas (sin layout) */}
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
-      </Routes>
-    </BrowserRouter>
-  );
+    return (
+        <BrowserRouter>
+            <Routes>
+                {/* Rutas que usan el layout principal */}
+                <Route path="/" element={<MainLayout />}>
+                    <Route index element={<HomePage />} />
+                    <Route path="mentors" element={<MentorsPage />} />
+                    <Route path="sessions" element={<SessionsPage />} />
+                    <Route path="profile" element={<ProfilePage />} />
+                </Route>
+                {/* Rutas públicas (sin layout) */}
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/register" element={<RegisterPage />} />
+            </Routes>
+        </BrowserRouter>
+    );
 }
