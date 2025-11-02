@@ -12,9 +12,12 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
-  DialogActions
+  DialogActions,
+  TextField
 } from '@mui/material';
-import { Add, VideoCall, Cancel, CheckCircle, Schedule } from '@mui/icons-material';
+import RatingStars from '../../components/RatingStars';
+import { feedbackService } from '../../services/feedbackService';
+import { Add, VideoCall, Cancel, CheckCircle, Schedule, Star } from '@mui/icons-material';
 import { sessionService, Session } from '../../services/sessionService';
 import { authService } from '../../services/authService';
 
@@ -22,33 +25,39 @@ export default function SessionsPage() {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
   const currentUser = authService.getCurrentUser();
+  const [feedbackDialog, setFeedbackDialog] = useState(false);
+  const [selectedSessionForFeedback, setSelectedSessionForFeedback] = useState<Session | null>(null);
+  const [feedbackRating, setFeedbackRating] = useState(0);
+  const [feedbackComment, setFeedbackComment] = useState('');
+  const [feedbackLoading, setFeedbackLoading] = useState(false);
 
   useEffect(() => {
-  const loadData = async () => {
-    try {
-      setLoading(true);
-      let data: Session[];
-      
-      if (currentUser?.role === 'mentor') {
-        data = await sessionService.getMentorSessions();
-      } else {
-        data = await sessionService.getUserSessions();
+    const loadData = async () => {
+      try {
+        setLoading(true);
+        let data: Session[];
+        
+        if (currentUser?.role === 'mentor') {
+          data = await sessionService.getMentorSessions();
+        } else {
+          data = await sessionService.getUserSessions();
+        }
+        
+        setSessions(data);
+      } catch (err: unknown) {
+        setError('Error al cargar las sesiones');
+        console.error('Error loading sessions:', err);
+      } finally {
+        setLoading(false);
       }
-      
-      setSessions(data);
-    } catch (err: unknown) {
-      setError('Error al cargar las sesiones');
-      console.error('Error loading sessions:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
 
-  loadData();
-}, [currentUser?.role]);
+    loadData();
+  }, [currentUser?.role]);
 
   const loadSessions = async () => {
     try {
@@ -77,6 +86,33 @@ export default function SessionsPage() {
       case 'completed': return 'primary';
       case 'cancelled': return 'error';
       default: return 'default';
+    }
+  };
+
+  const handleSubmitFeedback = async () => {
+    if (!selectedSessionForFeedback) return;
+
+    try {
+      setFeedbackLoading(true);
+      
+      await feedbackService.createFeedback({
+        sessionId: selectedSessionForFeedback._id,
+        rating: feedbackRating,
+        comment: feedbackComment
+      });
+
+      // Recargar sesiones para actualizar estados
+      loadSessions();
+      setFeedbackDialog(false);
+      setFeedbackRating(0);
+      setFeedbackComment('');
+      setSuccess('¡Feedback enviado exitosamente!');
+      
+    } catch (err: unknown) {
+      setError('Error al enviar el feedback');
+      console.error('Error submitting feedback:', err);
+    } finally {
+      setFeedbackLoading(false);
     }
   };
 
@@ -145,6 +181,12 @@ export default function SessionsPage() {
       {error && (
         <Alert severity="error" sx={{ mb: 3 }}>
           {error}
+        </Alert>
+      )}
+
+      {success && (
+        <Alert severity="success" sx={{ mb: 3 }}>
+          {success}
         </Alert>
       )}
 
@@ -261,6 +303,22 @@ export default function SessionsPage() {
                         Cancelar
                       </Button>
                     )}
+
+                    {/* Botón de Calificar para sesiones completadas */}
+                    {session.status === 'completed' && currentUser?.role === 'mentee' && (
+                      <Button
+                        variant="outlined"
+                        color="primary"
+                        startIcon={<Star />}
+                        size="small"
+                        onClick={() => {
+                          setSelectedSessionForFeedback(session);
+                          setFeedbackDialog(true);
+                        }}
+                      >
+                        Calificar
+                      </Button>
+                    )}
                   </Box>
                 </Box>
               </CardContent>
@@ -313,6 +371,57 @@ export default function SessionsPage() {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setSelectedSession(null)}>Cerrar</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Feedback Dialog */}
+      <Dialog open={feedbackDialog} onClose={() => setFeedbackDialog(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Calificar Sesión</DialogTitle>
+        <DialogContent>
+          {selectedSessionForFeedback && (
+            <Box display="flex" flexDirection="column" gap={3} mt={2}>
+              <Typography variant="h6" gutterBottom>
+                ¿Cómo calificarías tu sesión con {selectedSessionForFeedback.mentorId.userId.name}?
+              </Typography>
+              
+              <Box>
+                <Typography variant="body2" color="text.secondary" gutterBottom>
+                  Calificación:
+                </Typography>
+                <RatingStars
+                  rating={feedbackRating}
+                  onRatingChange={setFeedbackRating}
+                  size="large"
+                />
+              </Box>
+              
+              <TextField
+                label="Comentario (opcional)"
+                multiline
+                rows={4}
+                value={feedbackComment}
+                onChange={(e) => setFeedbackComment(e.target.value)}
+                placeholder="Comparte tu experiencia, qué aprendiste, cómo fue la sesión..."
+                fullWidth
+              />
+              
+              <Typography variant="body2" color="text.secondary">
+                Tema: {selectedSessionForFeedback.topic}
+              </Typography>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setFeedbackDialog(false)} disabled={feedbackLoading}>
+            Cancelar
+          </Button>
+          <Button 
+            onClick={handleSubmitFeedback}
+            variant="contained"
+            disabled={feedbackLoading || feedbackRating === 0}
+          >
+            {feedbackLoading ? 'Enviando...' : 'Enviar Calificación'}
+          </Button>
         </DialogActions>
       </Dialog>
     </Container>

@@ -8,6 +8,7 @@ import authRoutes from './routes/auth';
 import userRoutes from './routes/users';
 import mentorRoutes from './routes/mentors';
 import sessionRoutes from './routes/sessions';
+import feedbackRoutes from './routes/feedback';
 
 // Cargar variables de entorno
 dotenv.config();
@@ -33,6 +34,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/mentors', mentorRoutes);
 app.use('/api/sessions', sessionRoutes);
+app.use('/api/feedback', feedbackRoutes);
 
 // Ruta de prueba
 app.get('/api/health', (req, res) => {

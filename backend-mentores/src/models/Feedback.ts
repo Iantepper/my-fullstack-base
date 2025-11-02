@@ -40,4 +40,7 @@ const feedbackSchema = new Schema<IFeedback>({
   timestamps: true
 });
 
+// Índice único para evitar múltiples feedbacks por sesión
+feedbackSchema.index({ sessionId: 1 }, { unique: true });
+
 export default mongoose.model<IFeedback>('Feedback', feedbackSchema);
