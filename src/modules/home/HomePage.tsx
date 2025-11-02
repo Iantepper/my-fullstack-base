@@ -8,118 +8,275 @@ export default function HomePage() {
 
   return (
     <Container maxWidth="lg">
-      {/* Hero Section */}
+      {/* Hero Section - Más minimalista y elegante */}
       <Box 
         sx={{ 
           textAlign: 'center', 
-          py: 8,
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-          borderRadius: 2,
-          color: 'white',
-          mb: 6
+          py: { xs: 6, md: 10 },
+          mb: 8,
+          position: 'relative',
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'linear-gradient(135deg, rgba(139, 95, 191, 0.1) 0%, rgba(26, 26, 46, 0.8) 100%)',
+            borderRadius: 2,
+            zIndex: 1,
+          }
         }}
       >
-        <Typography variant="h2" component="h1" gutterBottom fontWeight="bold">
-          Bienvenido a Mentores Pro
-        </Typography>
-        <Typography variant="h5" component="p" gutterBottom sx={{ mb: 4, opacity: 0.9 }}>
-          Conecta con mentores expertos y acelera tu crecimiento profesional
-        </Typography>
-        
-        {!isAuthenticated ? (
-          <Box>
-            <Button 
-              variant="contained" 
-              size="large" 
-              component={Link} 
-              to="/register"
-              sx={{ 
-                mr: 2,
-                bgcolor: 'white',
-                color: '#667eea',
-                '&:hover': {
-                  bgcolor: '#f5f5f5'
-                }
-              }}
-            >
-              Comenzar Ahora
-            </Button>
-            <Button 
-              variant="outlined" 
-              size="large" 
-              component={Link} 
-              to="/mentors"
-              sx={{ 
-                borderColor: 'white',
-                color: 'white',
-                '&:hover': {
-                  bgcolor: 'rgba(255,255,255,0.1)'
-                }
-              }}
-            >
-              Explorar Mentores
-            </Button>
-          </Box>
-        ) : (
-          <Typography variant="h6" sx={{ opacity: 0.9 }}>
-            ¡Hola {currentUser?.name}! ¿Listo para conectar con mentores?
+        <Box position="relative" zIndex={2}>
+          <Typography 
+            variant="h1" 
+            component="h1" 
+            gutterBottom 
+            fontWeight="bold"
+            sx={{
+              fontSize: { xs: '2.5rem', md: '3.5rem' },
+              background: 'linear-gradient(135deg, #E2E8F0 0%, #9D76C9 100%)',
+              backgroundClip: 'text',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              mb: 2
+            }}
+          >
+            Mentores Pro
           </Typography>
-        )}
+          
+          <Typography 
+            variant="h5" 
+            component="p" 
+            gutterBottom 
+            sx={{ 
+              mb: 4, 
+              color: 'text.secondary',
+              maxWidth: '600px',
+              mx: 'auto',
+              lineHeight: 1.6
+            }}
+          >
+            Conecta con expertos que acelerarán tu crecimiento profesional
+          </Typography>
+          
+          {!isAuthenticated ? (
+            <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
+              <Button 
+                variant="contained" 
+                size="large" 
+                component={Link} 
+                to="/register"
+                sx={{ 
+                  px: 4,
+                  py: 1.5,
+                  fontSize: '1.1rem'
+                }}
+              >
+                Comenzar Ahora
+              </Button>
+              <Button 
+                variant="outlined" 
+                size="large" 
+                component={Link} 
+                to="/mentors"
+                sx={{ 
+                  px: 4,
+                  py: 1.5,
+                  fontSize: '1.1rem'
+                }}
+              >
+                Explorar Mentores
+              </Button>
+            </Box>
+          ) : (
+            <Box>
+              <Typography variant="h6" sx={{ mb: 3, color: 'text.secondary' }}>
+                ¡Hola {currentUser?.name}! ¿Listo para tu próxima sesión?
+              </Typography>
+              <Button 
+                variant="contained" 
+                size="large" 
+                component={Link} 
+                to="/mentors"
+                sx={{ 
+                  px: 4,
+                  py: 1.5,
+                  fontSize: '1.1rem'
+                }}
+              >
+                Ver Mentores
+              </Button>
+            </Box>
+          )}
+        </Box>
       </Box>
 
-      {/* Features Section - usando Box en lugar de Grid */}
-      <Box sx={{ display: 'flex', gap: 4, mb: 6, flexWrap: 'wrap', justifyContent: 'center' }}>
-        <Card sx={{ width: 300, transition: 'transform 0.2s', '&:hover': { transform: 'translateY(-4px)' } }}>
-          <CardContent sx={{ textAlign: 'center', p: 3 }}>
-            <Typography variant="h4" color="primary" gutterBottom>
-              👨‍💼
-            </Typography>
-            <Typography variant="h5" gutterBottom>
-              Encuentra Mentores
-            </Typography>
-            <Typography variant="body1" color="text.secondary">
-              Descubre profesionales experimentados en tu área de interés.
-            </Typography>
-          </CardContent>
-        </Card>
+      {/* Features Section - Más útil y directa */}
+      <Box sx={{ mb: 8 }}>
+        <Typography 
+          variant="h3" 
+          component="h2" 
+          textAlign="center" 
+          gutterBottom
+          sx={{ mb: 6 }}
+        >
+          ¿Cómo funciona?
+        </Typography>
         
-        <Card sx={{ width: 300, transition: 'transform 0.2s', '&:hover': { transform: 'translateY(-4px)' } }}>
-          <CardContent sx={{ textAlign: 'center', p: 3 }}>
-            <Typography variant="h4" color="primary" gutterBottom>
-              📚
-            </Typography>
-            <Typography variant="h5" gutterBottom>
-              Aprende y Crece
-            </Typography>
-            <Typography variant="body1" color="text.secondary">
-              Accede a conocimiento especializado y recibe guía personalizada.
-            </Typography>
-          </CardContent>
-        </Card>
-        
-        <Card sx={{ width: 300, transition: 'transform 0.2s', '&:hover': { transform: 'translateY(-4px)' } }}>
-          <CardContent sx={{ textAlign: 'center', p: 3 }}>
-            <Typography variant="h4" color="primary" gutterBottom>
-              ⚡
-            </Typography>
-            <Typography variant="h5" gutterBottom>
-              Acelera tu Carrera
-            </Typography>
-            <Typography variant="body1" color="text.secondary">
-              Evita errores comunes y toma decisiones más inteligentes.
-            </Typography>
-          </CardContent>
-        </Card>
+        <Box sx={{ display: 'flex', gap: 4, flexWrap: 'wrap', justifyContent: 'center' }}>
+          <Card sx={{ 
+            width: 280, 
+            transition: 'all 0.3s ease', 
+            '&:hover': { 
+              transform: 'translateY(-8px)',
+              boxShadow: '0 12px 40px rgba(139, 95, 191, 0.2)'
+            } 
+          }}>
+            <CardContent sx={{ textAlign: 'center', p: 4 }}>
+              <Box sx={{ 
+                width: 60, 
+                height: 60, 
+                borderRadius: '50%', 
+                bgcolor: 'rgba(139, 95, 191, 0.1)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                mx: 'auto',
+                mb: 3
+              }}>
+                <Typography variant="h4" color="primary">
+                  👨‍💼
+                </Typography>
+              </Box>
+              <Typography variant="h5" gutterBottom sx={{ mb: 2 }}>
+                Encuentra
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.6 }}>
+                Descubre mentores verificados en tu área de expertise
+              </Typography>
+            </CardContent>
+          </Card>
+          
+          <Card sx={{ 
+            width: 280, 
+            transition: 'all 0.3s ease', 
+            '&:hover': { 
+              transform: 'translateY(-8px)',
+              boxShadow: '0 12px 40px rgba(139, 95, 191, 0.2)'
+            } 
+          }}>
+            <CardContent sx={{ textAlign: 'center', p: 4 }}>
+              <Box sx={{ 
+                width: 60, 
+                height: 60, 
+                borderRadius: '50%', 
+                bgcolor: 'rgba(139, 95, 191, 0.1)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                mx: 'auto',
+                mb: 3
+              }}>
+                <Typography variant="h4" color="primary">
+                  📅
+                </Typography>
+              </Box>
+              <Typography variant="h5" gutterBottom sx={{ mb: 2 }}>
+                Agenda
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.6 }}>
+                Reserva sesiones 1:1 según tu disponibilidad
+              </Typography>
+            </CardContent>
+          </Card>
+          
+          <Card sx={{ 
+            width: 280, 
+            transition: 'all 0.3s ease', 
+            '&:hover': { 
+              transform: 'translateY(-8px)',
+              boxShadow: '0 12px 40px rgba(139, 95, 191, 0.2)'
+            } 
+          }}>
+            <CardContent sx={{ textAlign: 'center', p: 4 }}>
+              <Box sx={{ 
+                width: 60, 
+                height: 60, 
+                borderRadius: '50%', 
+                bgcolor: 'rgba(139, 95, 191, 0.1)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                mx: 'auto',
+                mb: 3
+              }}>
+                <Typography variant="h4" color="primary">
+                  🚀
+                </Typography>
+              </Box>
+              <Typography variant="h5" gutterBottom sx={{ mb: 2 }}>
+                Crece
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.6 }}>
+                Aprende con mentoría personalizada y acelera tu carrera
+              </Typography>
+            </CardContent>
+          </Card>
+        </Box>
       </Box>
 
-      {/* CTA Section */}
+      {/* Stats Section - Más relevante */}
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'space-around', 
+        flexWrap: 'wrap', 
+        gap: 4, 
+        mb: 8,
+        textAlign: 'center'
+      }}>
+        <Box>
+          <Typography variant="h3" component="div" color="primary" fontWeight="bold">
+            50+
+          </Typography>
+          <Typography variant="body1" color="text.secondary">
+            Mentores Expertos
+          </Typography>
+        </Box>
+        <Box>
+          <Typography variant="h3" component="div" color="primary" fontWeight="bold">
+            500+
+          </Typography>
+          <Typography variant="body1" color="text.secondary">
+            Sesiones Realizadas
+          </Typography>
+        </Box>
+        <Box>
+          <Typography variant="h3" component="div" color="primary" fontWeight="bold">
+            4.9★
+          </Typography>
+          <Typography variant="body1" color="text.secondary">
+            Rating Promedio
+          </Typography>
+        </Box>
+      </Box>
+
+      {/* CTA Section - Solo para no autenticados */}
       {!isAuthenticated && (
-        <Box sx={{ textAlign: 'center', py: 4 }}>
-          <Typography variant="h4" gutterBottom>
-            ¿Listo para comenzar?
+        <Box sx={{ 
+          textAlign: 'center', 
+          py: 6,
+          border: '1px solid',
+          borderColor: 'rgba(139, 95, 191, 0.2)',
+          borderRadius: 2,
+          background: 'rgba(139, 95, 191, 0.05)'
+        }}>
+          <Typography variant="h4" gutterBottom fontWeight="bold">
+            Comienza tu journey hoy
           </Typography>
           <Typography variant="h6" color="text.secondary" gutterBottom sx={{ mb: 3 }}>
-            Únete a nuestra comunidad de aprendizaje
+            Únete a profesionales que están acelerando sus carreras
           </Typography>
           <Button 
             variant="contained" 
@@ -127,10 +284,9 @@ export default function HomePage() {
             component={Link} 
             to="/register"
             sx={{ 
-              bgcolor: '#667eea',
-              '&:hover': {
-                bgcolor: '#5a6fd8'
-              }
+              px: 5,
+              py: 1.5,
+              fontSize: '1.1rem'
             }}
           >
             Crear Cuenta Gratis
