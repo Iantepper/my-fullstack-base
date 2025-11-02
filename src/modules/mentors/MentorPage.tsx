@@ -9,16 +9,19 @@ import {
   InputAdornment,
   Container,
   CircularProgress,
-  Alert
+  Alert,
+  Button
 } from '@mui/material';
 import { Search, AttachMoney, Star } from '@mui/icons-material';
 import { mentorService, Mentor } from '../../services/mentorService';
+import { useNavigate } from 'react-router-dom';
 
 export default function MentorPage() {
   const [mentors, setMentors] = useState<Mentor[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const navigate = useNavigate();
 
   useEffect(() => {
     loadMentors();
@@ -217,6 +220,23 @@ export default function MentorPage() {
                       />
                     ))}
                   </Box>
+                </Box>
+
+                {/* Booking Button */}
+                <Box mt={2}>
+                  <Button 
+                    variant="contained" 
+                    fullWidth
+                    onClick={() => navigate(`/mentors/${mentor._id}`)}
+                    sx={{
+                      background: 'linear-gradient(135deg, #8B5FBF 0%, #6D3F99 100%)',
+                      '&:hover': {
+                        background: 'linear-gradient(135deg, #9D76C9 0%, #7D4FB9 100%)',
+                      }
+                    }}
+                  >
+                    Agendar Sesión
+                  </Button>
                 </Box>
               </CardContent>
             </Card>
