@@ -10,6 +10,11 @@ export interface RegisterData {
   email: string;
   password: string;
   role: 'mentor' | 'mentee';
+  expertise?: string[];
+  bio?: string;
+  experience?: string;
+  hourlyRate?: number;
+  availability?: string[];
 }
 
 export interface User {

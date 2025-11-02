@@ -1,13 +1,14 @@
 import express from 'express';
 import jwt from 'jsonwebtoken';
 import User from '../models/User';
+import Mentor from '../models/Mentor'; // ✅ Importar modelo Mentor
 
 const router = express.Router();
 
 // Registro de usuario
 router.post('/register', async (req, res) => {
   try {
-    const { name, email, password, role } = req.body;
+    const { name, email, password, role, expertise, bio, experience, hourlyRate, availability } = req.body;
 
     // Verificar si el usuario ya existe
     const existingUser = await User.findOne({ email });
@@ -24,6 +25,23 @@ router.post('/register', async (req, res) => {
     });
 
     await user.save();
+
+    // ✅ CREAR PERFIL DE MENTOR AUTOMÁTICAMENTE si el rol es 'mentor'
+    if (role === 'mentor') {
+      const mentorProfile = new Mentor({
+        userId: user._id,
+        expertise: expertise || [],
+        bio: bio || '',
+        experience: experience || '',
+        hourlyRate: hourlyRate || 0,
+        availability: availability || [],
+        rating: 0,
+        reviewCount: 0,
+        isAvailable: true
+      });
+
+      await mentorProfile.save();
+    }
 
     // Generar token JWT
     const token = jwt.sign(
@@ -48,7 +66,7 @@ router.post('/register', async (req, res) => {
   }
 });
 
-// Login de usuario
+// Login de usuario (se mantiene igual)
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
