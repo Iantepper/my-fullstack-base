@@ -32,6 +32,7 @@ export interface CreateFeedbackData {
 }
 
 export const feedbackService = {
+  
   async createFeedback(feedbackData: CreateFeedbackData): Promise<{ message: string; feedback: Feedback }> {
     const response = await api.post<{ message: string; feedback: Feedback }>('/feedback', feedbackData);
     return response.data;
@@ -44,6 +45,10 @@ export const feedbackService = {
 
   async getUserFeedback(): Promise<Feedback[]> {
     const response = await api.get<Feedback[]>('/feedback/my-feedback');
+    return response.data;
+  },
+  async getFeedbackBySession(sessionId: string): Promise<Feedback> {
+    const response = await api.get<Feedback>(`/feedback/session/${sessionId}`);
     return response.data;
   }
 };

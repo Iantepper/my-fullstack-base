@@ -1,6 +1,7 @@
 import express from 'express';
 import { 
   createFeedback, 
+  getFeedbackBySessionId, 
   getMentorFeedback, 
   getUserFeedback 
 } from '../controllers/feedbackController';
@@ -19,5 +20,8 @@ router.get('/mentor/:mentorId', getMentorFeedback);
 
 // Obtener feedback del usuario actual
 router.get('/my-feedback', getUserFeedback);
+
+// Obtener feedback por sessionId
+router.get('/session/:sessionId', getFeedbackBySessionId);
 
 export default router;

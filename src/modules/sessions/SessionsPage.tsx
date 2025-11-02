@@ -21,6 +21,19 @@ import { Add, VideoCall, Cancel, CheckCircle, Schedule, Star } from '@mui/icons-
 import { sessionService, Session } from '../../services/sessionService';
 import { authService } from '../../services/authService';
 
+// ✅ Interface FUERA del componente
+interface SessionFeedback {
+  _id: string;
+  rating: number;
+  comment: string;
+  menteeId: {
+    _id: string;
+    name: string;
+    avatar?: string;
+  };
+  createdAt: string;
+}
+
 export default function SessionsPage() {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
@@ -34,29 +47,11 @@ export default function SessionsPage() {
   const [feedbackRating, setFeedbackRating] = useState(0);
   const [feedbackComment, setFeedbackComment] = useState('');
   const [feedbackLoading, setFeedbackLoading] = useState(false);
+  const [sessionFeedbacks, setSessionFeedbacks] = useState<{[sessionId: string]: SessionFeedback}>({});
 
+  // ✅ SOLO UN useEffect
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        setLoading(true);
-        let data: Session[];
-        
-        if (currentUser?.role === 'mentor') {
-          data = await sessionService.getMentorSessions();
-        } else {
-          data = await sessionService.getUserSessions();
-        }
-        
-        setSessions(data);
-      } catch (err: unknown) {
-        setError('Error al cargar las sesiones');
-        console.error('Error loading sessions:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadData();
+    loadSessions();
   }, [currentUser?.role]);
 
   const loadSessions = async () => {
@@ -71,11 +66,32 @@ export default function SessionsPage() {
       }
       
       setSessions(data);
+
+      // ✅ Cargar feedbacks SOLO para sesiones completadas que NO tenemos
+      const feedbackPromises = data
+        .filter(session => session.status === 'completed' && !sessionFeedbacks[session._id])
+        .map(session => loadSessionFeedback(session._id));
+
+      await Promise.all(feedbackPromises);
+
     } catch (err: unknown) {
       setError('Error al cargar las sesiones');
       console.error('Error loading sessions:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadSessionFeedback = async (sessionId: string) => {
+    try {
+      const feedback = await feedbackService.getFeedbackBySession(sessionId);
+      setSessionFeedbacks(prev => ({
+        ...prev,
+        [sessionId]: feedback
+      }));
+    } catch {
+      // Si no hay feedback, no hacemos nada (es normal)
+      console.log('No hay feedback para esta sesión:', sessionId);
     }
   };
 
@@ -101,8 +117,9 @@ export default function SessionsPage() {
         comment: feedbackComment
       });
 
-      // Recargar sesiones para actualizar estados
-      loadSessions();
+      // ✅ Recargar SOLO el feedback de esta sesión
+      await loadSessionFeedback(selectedSessionForFeedback._id);
+      
       setFeedbackDialog(false);
       setFeedbackRating(0);
       setFeedbackComment('');
@@ -129,7 +146,13 @@ export default function SessionsPage() {
   const handleStatusUpdate = async (sessionId: string, newStatus: Session['status']) => {
     try {
       await sessionService.updateSessionStatus(sessionId, newStatus);
-      loadSessions(); // Recargar sesiones
+      
+      // ✅ Si se completa una sesión, cargar su feedback
+      if (newStatus === 'completed') {
+        await loadSessionFeedback(sessionId);
+      }
+      
+      loadSessions();
     } catch (err: unknown) {
       setError('Error al actualizar la sesión');
       console.error('Error updating session:', err);
@@ -139,7 +162,7 @@ export default function SessionsPage() {
   const handleCancelSession = async (sessionId: string) => {
     try {
       await sessionService.cancelSession(sessionId);
-      loadSessions(); // Recargar sesiones
+      loadSessions();
     } catch (err: unknown) {
       setError('Error al cancelar la sesión');
       console.error('Error cancelling session:', err);
@@ -241,6 +264,43 @@ export default function SessionsPage() {
                         {session.description}
                       </Typography>
                     )}
+
+                    {/* Feedback Section */}
+                    {session.status === 'completed' && sessionFeedbacks[session._id] && (
+                      <Box mt={2} p={2} sx={{ 
+                        bgcolor: 'background.default', 
+                        borderRadius: 1,
+                        border: '1px solid',
+                        borderColor: 'divider'
+                      }}>
+                        <Typography variant="subtitle2" fontWeight="bold" gutterBottom color="primary">
+                          📝 Reseña de la sesión
+                        </Typography>
+                        
+                        <Box display="flex" alignItems="center" mb={1}>
+                          <RatingStars 
+                            rating={sessionFeedbacks[session._id].rating} 
+                            readOnly 
+                            size="small" 
+                          />
+                          <Typography variant="body2" color="text.secondary" sx={{ ml: 1 }}>
+                            Calificación de {sessionFeedbacks[session._id].menteeId.name}
+                          </Typography>
+                        </Box>
+                        
+                        <Typography variant="body2">
+                          {sessionFeedbacks[session._id].comment}
+                        </Typography>
+                      </Box>
+                    )}
+
+                    {session.status === 'completed' && !sessionFeedbacks[session._id] && currentUser?.role === 'mentor' && (
+                      <Box mt={2} p={1} sx={{ bgcolor: 'background.default', borderRadius: 1 }}>
+                        <Typography variant="body2" color="text.secondary">
+                          ⏳ Esperando calificación de {session.menteeId.name}
+                        </Typography>
+                      </Box>
+                    )}
                   </Box>
 
                   {/* Action Buttons */}
@@ -254,6 +314,18 @@ export default function SessionsPage() {
                         size="small"
                       >
                         Unirse
+                      </Button>
+                    )}
+
+                    {session.status === 'confirmed' && (
+                      <Button
+                        variant="outlined"
+                        color="primary"
+                        startIcon={<CheckCircle />}
+                        size="small"
+                        onClick={() => handleStatusUpdate(session._id, 'completed')}
+                      >
+                        Completar Sesión
                       </Button>
                     )}
                     
@@ -304,8 +376,7 @@ export default function SessionsPage() {
                       </Button>
                     )}
 
-                    {/* Botón de Calificar para sesiones completadas */}
-                    {session.status === 'completed' && currentUser?.role === 'mentee' && (
+                    {session.status === 'completed' && currentUser?.role === 'mentee' && !sessionFeedbacks[session._id] && (
                       <Button
                         variant="outlined"
                         color="primary"
@@ -327,7 +398,7 @@ export default function SessionsPage() {
         )}
       </Box>
 
-      {/* Create Session Dialog */}
+      {/* Resto de los diálogos (igual que antes) */}
       <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Agendar Nueva Sesión</DialogTitle>
         <DialogContent>
@@ -340,7 +411,6 @@ export default function SessionsPage() {
         </DialogActions>
       </Dialog>
 
-      {/* Session Details Dialog */}
       <Dialog open={!!selectedSession} onClose={() => setSelectedSession(null)} maxWidth="sm" fullWidth>
         <DialogTitle>Detalles de la Sesión</DialogTitle>
         <DialogContent>
@@ -374,7 +444,6 @@ export default function SessionsPage() {
         </DialogActions>
       </Dialog>
 
-      {/* Feedback Dialog */}
       <Dialog open={feedbackDialog} onClose={() => setFeedbackDialog(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Calificar Sesión</DialogTitle>
         <DialogContent>

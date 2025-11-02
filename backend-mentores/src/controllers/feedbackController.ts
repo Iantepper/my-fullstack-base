@@ -106,6 +106,33 @@ export const getUserFeedback = async (req: AuthRequest, res: Response) => {
   }
 };
 
+// Obtener feedback por sessionId
+export const getFeedbackBySessionId = async (req: AuthRequest, res: Response) => {
+  try {
+    const { sessionId } = req.params;
+
+    const feedback = await Feedback.findOne({ sessionId })
+      .populate('menteeId', 'name avatar')
+      .populate('mentorId', 'userId')
+      .populate({
+        path: 'mentorId',
+        populate: {
+          path: 'userId',
+          select: 'name avatar'
+        }
+      });
+
+    if (!feedback) {
+      return res.status(404).json({ message: 'No se encontró feedback para esta sesión' });
+    }
+
+    res.json(feedback);
+  } catch (error) {
+    console.error('Error obteniendo feedback por session:', error);
+    res.status(500).json({ message: 'Error interno del servidor' });
+  }
+};
+
 // Función para actualizar el rating promedio del mentor
 const updateMentorRating = async (mentorId: mongoose.Types.ObjectId) => {
   try {
