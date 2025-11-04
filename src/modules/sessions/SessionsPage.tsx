@@ -20,6 +20,7 @@ import { feedbackService } from '../../services/feedbackService';
 import { Add, VideoCall, Cancel, CheckCircle, Schedule, Star } from '@mui/icons-material';
 import { sessionService, Session } from '../../services/sessionService';
 import { authService } from '../../services/authService';
+import { useNavigate } from 'react-router-dom';
 
 // ✅ Interface FUERA del componente
 interface SessionFeedback {
@@ -48,6 +49,7 @@ export default function SessionsPage() {
   const [feedbackComment, setFeedbackComment] = useState('');
   const [feedbackLoading, setFeedbackLoading] = useState(false);
   const [sessionFeedbacks, setSessionFeedbacks] = useState<{[sessionId: string]: SessionFeedback}>({});
+  const navigate = useNavigate();
 
   // ✅ SOLO UN useEffect
   useEffect(() => {
@@ -193,12 +195,12 @@ export default function SessionsPage() {
         </Box>
         
         <Button
-          variant="contained"
-          startIcon={<Add />}
-          onClick={() => setOpenDialog(true)}
-        >
-          Nueva Sesión
-        </Button>
+  variant="contained"
+  startIcon={<Add />}
+  onClick={() => navigate('/mentors')}  // ✅ Ahora redirige a mentores
+>
+  Nueva Sesión
+</Button>
       </Box>
 
       {error && (
