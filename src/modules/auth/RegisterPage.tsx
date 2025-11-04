@@ -153,14 +153,15 @@ export default function RegisterPage() {
             </FormControl>
 
             <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 3 }}>
-              <Button
-                onClick={handleNext}
-                variant="contained"
-                disabled={!formData.name || !formData.email || !formData.password}
-              >
-                {formData.role === 'mentor' ? 'Siguiente' : 'Registrarse'}
-              </Button>
-            </Box>
+  <Button
+    onClick={formData.role === 'mentor' ? handleNext : handleSubmit}
+    variant="contained"
+    disabled={!formData.name || !formData.email || !formData.password}
+    type={formData.role === 'mentor' ? 'button' : 'submit'}
+  >
+    {formData.role === 'mentor' ? 'Siguiente' : 'Registrarse'}
+  </Button>
+</Box>
           </Box>
         )}
 
