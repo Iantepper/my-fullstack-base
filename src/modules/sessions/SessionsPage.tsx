@@ -13,14 +13,19 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  TextField
+  TextField,
+  ToggleButton,
+  ToggleButtonGroup
 } from '@mui/material';
 import RatingStars from '../../components/RatingStars';
 import { feedbackService } from '../../services/feedbackService';
-import { Add, VideoCall, Cancel, CheckCircle, Schedule, Star } from '@mui/icons-material';
+import { Add, VideoCall, Cancel, CheckCircle, Schedule, Star, ViewList, CalendarViewMonth } from '@mui/icons-material';
 import { sessionService, Session } from '../../services/sessionService';
 import { authService } from '../../services/authService';
 import { useNavigate } from 'react-router-dom';
+import Calendar from '../../components/Calendar/Calendar';
+
+import { Dayjs } from 'dayjs';
 
 // ✅ Interface FUERA del componente
 interface SessionFeedback {
@@ -35,13 +40,21 @@ interface SessionFeedback {
   createdAt: string;
 }
 
+interface CalendarSession {
+  _id: string;
+  date: string;
+  status: 'pending' | 'confirmed' | 'completed' | 'cancelled';
+  topic: string;
+}
+
+
 export default function SessionsPage() {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [openDialog, setOpenDialog] = useState(false);
-  const [selectedSession, setSelectedSession] = useState<Session | null>(null);
+
   const currentUser = authService.getCurrentUser();
   const [feedbackDialog, setFeedbackDialog] = useState(false);
   const [selectedSessionForFeedback, setSelectedSessionForFeedback] = useState<Session | null>(null);
@@ -50,6 +63,7 @@ export default function SessionsPage() {
   const [feedbackLoading, setFeedbackLoading] = useState(false);
   const [sessionFeedbacks, setSessionFeedbacks] = useState<{[sessionId: string]: SessionFeedback}>({});
   const navigate = useNavigate();
+  const [view, setView] = useState<'list' | 'calendar'>('calendar');
 
   // ✅ SOLO UN useEffect
   useEffect(() => {
@@ -106,6 +120,11 @@ export default function SessionsPage() {
       default: return 'default';
     }
   };
+
+  const [selectedDateSessions, setSelectedDateSessions] = useState<{
+  date: Dayjs;
+  sessions: CalendarSession[];
+} | null>(null);
 
   const handleSubmitFeedback = async () => {
     if (!selectedSessionForFeedback) return;
@@ -171,6 +190,12 @@ export default function SessionsPage() {
     }
   };
 
+const handleDateClick = (date: Dayjs, sessions: CalendarSession[]) => {
+  if (sessions.length > 0) {
+    setSelectedDateSessions({ date, sessions });
+  }
+};
+
   if (loading) {
     return (
       <Container maxWidth="lg">
@@ -194,13 +219,29 @@ export default function SessionsPage() {
           </Typography>
         </Box>
         
-        <Button
-  variant="contained"
-  startIcon={<Add />}
-  onClick={() => navigate('/mentors')}  // ✅ Ahora redirige a mentores
->
-  Nueva Sesión
-</Button>
+        <Box display="flex" gap={2} alignItems="center">
+          <ToggleButtonGroup
+            value={view}
+            exclusive
+            onChange={(_, newView) => newView && setView(newView)}
+            aria-label="Vista de sesiones"
+          >
+            <ToggleButton value="calendar" aria-label="vista calendario">
+              <CalendarViewMonth />
+            </ToggleButton>
+            <ToggleButton value="list" aria-label="vista lista">
+              <ViewList />
+            </ToggleButton>
+          </ToggleButtonGroup>
+
+          <Button
+            variant="contained"
+            startIcon={<Add />}
+            onClick={() => navigate('/mentors')}
+          >
+            Nueva Sesión
+          </Button>
+        </Box>
       </Box>
 
       {error && (
@@ -215,36 +256,44 @@ export default function SessionsPage() {
         </Alert>
       )}
 
-      {/* Sessions List */}
-      <Box display="flex" flexDirection="column" gap={3}>
+{/* Vista Dividida - Lista Compacta + Calendario */}
+{view === 'calendar' && (
+  <Box display="flex" gap={3} flexDirection={{ xs: 'column', md: 'row' }}>
+    {/* Lista COMPACTA MEJORADA - Ocupa 60% */}
+    <Box flex={{ md: 0.6 }}>
+      <Typography variant="h5" gutterBottom sx={{ mb: 3, color: 'primary.main', fontWeight: 'bold' }}>
+        📅 Tus Sesiones
+      </Typography>
+      <Box display="flex" flexDirection="column" gap={2} sx={{ maxHeight: '600px', overflow: 'auto', pr: 1 }}>
         {sessions.length === 0 ? (
-          <Card>
-            <CardContent sx={{ textAlign: 'center', py: 6 }}>
-              <Schedule sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
+          <Card variant="outlined">
+            <CardContent sx={{ textAlign: 'center', py: 4 }}>
+              <Schedule sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
               <Typography variant="h6" color="text.secondary" gutterBottom>
-                No tienes sesiones programadas
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                {currentUser?.role === 'mentor' 
-                  ? 'Cuando los mentorizados agenden sesiones, aparecerán aquí.'
-                  : 'Agenda tu primera sesión con un mentor para comenzar.'
-                }
+                No tienes sesiones
               </Typography>
             </CardContent>
           </Card>
         ) : (
           sessions.map((session) => (
-            <Card key={session._id}>
-              <CardContent sx={{ p: 3 }}>
-                <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={2}>
-                  <Box flex={1}>
-                    <Typography variant="h6" fontWeight="bold" gutterBottom>
-                      {session.topic}
-                    </Typography>
-                    
-                    <Box display="flex" alignItems="center" gap={2} mb={1}>
-                      <Typography variant="body2" color="text.secondary">
-                        Con: {currentUser?.role === 'mentor' ? session.menteeId.name : session.mentorId.userId.name}
+            <Card 
+              key={session._id} 
+              variant="outlined"
+              sx={{ 
+                transition: 'all 0.2s ease',
+                '&:hover': {
+                  borderColor: 'primary.main',
+                  boxShadow: '0 4px 12px rgba(139, 95, 191, 0.1)'
+                }
+              }}
+            >
+              <CardContent sx={{ p: 2.5 }}>
+                <Box display="flex" justifyContent="space-between" alignItems="flex-start">
+                  {/* Información principal */}
+                  <Box flex={1} sx={{ minWidth: 0 }}> {/* minWidth: 0 para evitar overflow */}
+                    <Box display="flex" alignItems="flex-start" gap={1} mb={1}>
+                      <Typography variant="subtitle1" fontWeight="bold" sx={{ lineHeight: 1.2 }}>
+                        {session.topic}
                       </Typography>
                       <Chip
                         label={getStatusText(session.status)}
@@ -252,142 +301,102 @@ export default function SessionsPage() {
                         size="small"
                       />
                     </Box>
-
-                    <Typography variant="body2" color="text.secondary">
-                      📅 {new Date(session.date).toLocaleString('es-ES')}
+                    
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                      👤 {currentUser?.role === 'mentor' ? session.menteeId.name : session.mentorId.userId.name}
+                    </Typography>
+                    
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                      🕐 {new Date(session.date).toLocaleDateString('es-ES')} • {session.duration}min
                     </Typography>
                     
                     <Typography variant="body2" color="text.secondary">
-                      ⏱️ {session.duration} minutos • 💰 ${session.price}
+                      💰 ${session.price}
                     </Typography>
 
                     {session.description && (
-                      <Typography variant="body2" sx={{ mt: 1 }}>
-                        {session.description}
+                      <Typography 
+                        variant="body2" 
+                        sx={{ 
+                          mt: 1, 
+                          color: 'text.secondary',
+                          fontStyle: 'italic',
+                          fontSize: '0.875rem'
+                        }}
+                      >
+                        {session.description.length > 60 
+                          ? `${session.description.substring(0, 60)}...` 
+                          : session.description
+                        }
                       </Typography>
-                    )}
-
-                    {/* Feedback Section */}
-                    {session.status === 'completed' && sessionFeedbacks[session._id] && (
-                      <Box mt={2} p={2} sx={{ 
-                        bgcolor: 'background.default', 
-                        borderRadius: 1,
-                        border: '1px solid',
-                        borderColor: 'divider'
-                      }}>
-                        <Typography variant="subtitle2" fontWeight="bold" gutterBottom color="primary">
-                          📝 Reseña de la sesión
-                        </Typography>
-                        
-                        <Box display="flex" alignItems="center" mb={1}>
-                          <RatingStars 
-                            rating={sessionFeedbacks[session._id].rating} 
-                            readOnly 
-                            size="small" 
-                          />
-                          <Typography variant="body2" color="text.secondary" sx={{ ml: 1 }}>
-                            Calificación de {sessionFeedbacks[session._id].menteeId.name}
-                          </Typography>
-                        </Box>
-                        
-                        <Typography variant="body2">
-                          {sessionFeedbacks[session._id].comment}
-                        </Typography>
-                      </Box>
-                    )}
-
-                    {session.status === 'completed' && !sessionFeedbacks[session._id] && currentUser?.role === 'mentor' && (
-                      <Box mt={2} p={1} sx={{ bgcolor: 'background.default', borderRadius: 1 }}>
-                        <Typography variant="body2" color="text.secondary">
-                          ⏳ Esperando calificación de {session.menteeId.name}
-                        </Typography>
-                      </Box>
                     )}
                   </Box>
 
-                  {/* Action Buttons */}
-                  <Box display="flex" flexDirection="column" gap={1}>
+                  {/* Botones de acción */}
+                  <Box display="flex" flexDirection="column" gap={1} sx={{ ml: 2, flexShrink: 0 }}>
                     {session.meetingLink && session.status === 'confirmed' && (
-                      <Button
+                      <Button 
+                        size="small" 
                         variant="contained"
-                        startIcon={<VideoCall />}
-                        href={session.meetingLink}
+                        startIcon={<VideoCall />} 
+                        href={session.meetingLink} 
                         target="_blank"
-                        size="small"
+                        sx={{ minWidth: 'auto' }}
                       >
                         Unirse
                       </Button>
                     )}
-
+                    
                     {session.status === 'confirmed' && (
-                      <Button
+                      <Button 
+                        size="small" 
                         variant="outlined"
                         color="primary"
-                        startIcon={<CheckCircle />}
-                        size="small"
+                        startIcon={<CheckCircle />} 
                         onClick={() => handleStatusUpdate(session._id, 'completed')}
+                        sx={{ minWidth: 'auto' }}
                       >
-                        Completar Sesión
+                        Completar
                       </Button>
                     )}
                     
                     {currentUser?.role === 'mentor' && session.status === 'pending' && (
-                      <>
-                        <Button
-                          variant="outlined"
-                          color="success"
-                          startIcon={<CheckCircle />}
-                          size="small"
-                          onClick={() => handleStatusUpdate(session._id, 'confirmed')}
-                        >
-                          Confirmar
-                        </Button>
-                        <Button
-                          variant="outlined"
-                          color="error"
-                          startIcon={<Cancel />}
-                          size="small"
-                          onClick={() => handleCancelSession(session._id)}
-                        >
-                          Rechazar
-                        </Button>
-                      </>
-                    )}
-                    
-                    {currentUser?.role === 'mentee' && session.status === 'pending' && (
-                      <Button
+                      <Button 
+                        size="small" 
                         variant="outlined"
-                        color="error"
-                        startIcon={<Cancel />}
-                        size="small"
-                        onClick={() => handleCancelSession(session._id)}
+                        color="success"
+                        startIcon={<CheckCircle />} 
+                        onClick={() => handleStatusUpdate(session._id, 'confirmed')}
+                        sx={{ minWidth: 'auto' }}
                       >
-                        Cancelar
+                        Confirmar
                       </Button>
                     )}
-
-                    {session.status === 'confirmed' && (
-                      <Button
+                    
+                    {(session.status === 'pending' || session.status === 'confirmed') && (
+                      <Button 
+                        size="small" 
                         variant="outlined"
                         color="error"
-                        startIcon={<Cancel />}
-                        size="small"
+                        startIcon={<Cancel />} 
                         onClick={() => handleCancelSession(session._id)}
+                        sx={{ minWidth: 'auto' }}
                       >
-                        Cancelar
+                        {session.status === 'pending' ? 'Cancelar' : 'Rechazar'}
                       </Button>
                     )}
 
                     {session.status === 'completed' && currentUser?.role === 'mentee' && !sessionFeedbacks[session._id] && (
-                      <Button
+                      <Button 
+                        size="small" 
                         variant="outlined"
                         color="primary"
-                        startIcon={<Star />}
-                        size="small"
+                        startIcon={<Star />} 
                         onClick={() => {
                           setSelectedSessionForFeedback(session);
                           setFeedbackDialog(true);
                         }}
+                        sx={{ minWidth: 'auto' }}
                       >
                         Calificar
                       </Button>
@@ -399,8 +408,211 @@ export default function SessionsPage() {
           ))
         )}
       </Box>
+    </Box>
 
-      {/* Resto de los diálogos (igual que antes) */}
+    {/* Calendario - Ocupa 40% */}
+    <Box flex={{ md: 0.4 }}>
+      <Calendar 
+        sessions={sessions.map(s => ({
+          _id: s._id,
+          date: s.date,
+          status: s.status,
+          topic: s.topic
+        }))} 
+        onDateClick={handleDateClick} 
+      />
+    </Box>
+  </Box>
+)}
+
+      {/* Vista Lista */}
+      {view === 'list' && (
+        <Box display="flex" flexDirection="column" gap={3}>
+          {sessions.length === 0 ? (
+            <Card>
+              <CardContent sx={{ textAlign: 'center', py: 6 }}>
+                <Schedule sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
+                <Typography variant="h6" color="text.secondary" gutterBottom>
+                  No tienes sesiones programadas
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {currentUser?.role === 'mentor' 
+                    ? 'Cuando los mentorizados agenden sesiones, aparecerán aquí.'
+                    : 'Agenda tu primera sesión con un mentor para comenzar.'
+                  }
+                </Typography>
+              </CardContent>
+            </Card>
+          ) : (
+            sessions.map((session) => (
+              <Card key={session._id}>
+                <CardContent sx={{ p: 3 }}>
+                  <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={2}>
+                    <Box flex={1}>
+                      <Typography variant="h6" fontWeight="bold" gutterBottom>
+                        {session.topic}
+                      </Typography>
+                      
+                      <Box display="flex" alignItems="center" gap={2} mb={1}>
+                        <Typography variant="body2" color="text.secondary">
+                          Con: {currentUser?.role === 'mentor' ? session.menteeId.name : session.mentorId.userId.name}
+                        </Typography>
+                        <Chip
+                          label={getStatusText(session.status)}
+                          color={getStatusColor(session.status)}
+                          size="small"
+                        />
+                      </Box>
+
+                      <Typography variant="body2" color="text.secondary">
+                        📅 {new Date(session.date).toLocaleString('es-ES')}
+                      </Typography>
+                      
+                      <Typography variant="body2" color="text.secondary">
+                        ⏱️ {session.duration} minutos • 💰 ${session.price}
+                      </Typography>
+
+                      {session.description && (
+                        <Typography variant="body2" sx={{ mt: 1 }}>
+                          {session.description}
+                        </Typography>
+                      )}
+
+                      {/* Feedback Section */}
+                      {session.status === 'completed' && sessionFeedbacks[session._id] && (
+                        <Box mt={2} p={2} sx={{ 
+                          bgcolor: 'background.default', 
+                          borderRadius: 1,
+                          border: '1px solid',
+                          borderColor: 'divider'
+                        }}>
+                          <Typography variant="subtitle2" fontWeight="bold" gutterBottom color="primary">
+                            📝 Reseña de la sesión
+                          </Typography>
+                          
+                          <Box display="flex" alignItems="center" mb={1}>
+                            <RatingStars 
+                              rating={sessionFeedbacks[session._id].rating} 
+                              readOnly 
+                              size="small" 
+                            />
+                            <Typography variant="body2" color="text.secondary" sx={{ ml: 1 }}>
+                              Calificación de {sessionFeedbacks[session._id].menteeId.name}
+                            </Typography>
+                          </Box>
+                          
+                          <Typography variant="body2">
+                            {sessionFeedbacks[session._id].comment}
+                          </Typography>
+                        </Box>
+                      )}
+
+                      {session.status === 'completed' && !sessionFeedbacks[session._id] && currentUser?.role === 'mentor' && (
+                        <Box mt={2} p={1} sx={{ bgcolor: 'background.default', borderRadius: 1 }}>
+                          <Typography variant="body2" color="text.secondary">
+                            ⏳ Esperando calificación de {session.menteeId.name}
+                          </Typography>
+                        </Box>
+                      )}
+                    </Box>
+
+                    {/* Action Buttons */}
+                    <Box display="flex" flexDirection="column" gap={1}>
+                      {session.meetingLink && session.status === 'confirmed' && (
+                        <Button
+                          variant="contained"
+                          startIcon={<VideoCall />}
+                          href={session.meetingLink}
+                          target="_blank"
+                          size="small"
+                        >
+                          Unirse
+                        </Button>
+                      )}
+
+                      {session.status === 'confirmed' && (
+                        <Button
+                          variant="outlined"
+                          color="primary"
+                          startIcon={<CheckCircle />}
+                          size="small"
+                          onClick={() => handleStatusUpdate(session._id, 'completed')}
+                        >
+                          Completar Sesión
+                        </Button>
+                      )}
+                      
+                      {currentUser?.role === 'mentor' && session.status === 'pending' && (
+                        <>
+                          <Button
+                            variant="outlined"
+                            color="success"
+                            startIcon={<CheckCircle />}
+                            size="small"
+                            onClick={() => handleStatusUpdate(session._id, 'confirmed')}
+                          >
+                            Confirmar
+                          </Button>
+                          <Button
+                            variant="outlined"
+                            color="error"
+                            startIcon={<Cancel />}
+                            size="small"
+                            onClick={() => handleCancelSession(session._id)}
+                          >
+                            Rechazar
+                          </Button>
+                        </>
+                      )}
+                      
+                      {currentUser?.role === 'mentee' && session.status === 'pending' && (
+                        <Button
+                          variant="outlined"
+                          color="error"
+                          startIcon={<Cancel />}
+                          size="small"
+                          onClick={() => handleCancelSession(session._id)}
+                        >
+                          Cancelar
+                        </Button>
+                      )}
+
+                      {session.status === 'confirmed' && (
+                        <Button
+                          variant="outlined"
+                          color="error"
+                          startIcon={<Cancel />}
+                          size="small"
+                          onClick={() => handleCancelSession(session._id)}
+                        >
+                          Cancelar
+                        </Button>
+                      )}
+
+                      {session.status === 'completed' && currentUser?.role === 'mentee' && !sessionFeedbacks[session._id] && (
+                        <Button
+                          variant="outlined"
+                          color="primary"
+                          startIcon={<Star />}
+                          size="small"
+                          onClick={() => {
+                            setSelectedSessionForFeedback(session);
+                            setFeedbackDialog(true);
+                          }}
+                        >
+                          Calificar
+                        </Button>
+                      )}
+                    </Box>
+                  </Box>
+                </CardContent>
+              </Card>
+            ))
+          )}
+        </Box>
+      )}
+
+      {/* Diálogos (se mantienen igual) */}
       <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Agendar Nueva Sesión</DialogTitle>
         <DialogContent>
@@ -410,39 +622,6 @@ export default function SessionsPage() {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setOpenDialog(false)}>Cerrar</Button>
-        </DialogActions>
-      </Dialog>
-
-      <Dialog open={!!selectedSession} onClose={() => setSelectedSession(null)} maxWidth="sm" fullWidth>
-        <DialogTitle>Detalles de la Sesión</DialogTitle>
-        <DialogContent>
-          {selectedSession && (
-            <Box>
-              <Typography variant="h6" gutterBottom>
-                {selectedSession.topic}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Con: {currentUser?.role === 'mentor' ? selectedSession.menteeId.name : selectedSession.mentorId.userId.name}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Fecha: {new Date(selectedSession.date).toLocaleString('es-ES')}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Duración: {selectedSession.duration} minutos
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Precio: ${selectedSession.price}
-              </Typography>
-              {selectedSession.description && (
-                <Typography variant="body2" sx={{ mt: 2 }}>
-                  {selectedSession.description}
-                </Typography>
-              )}
-            </Box>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setSelectedSession(null)}>Cerrar</Button>
         </DialogActions>
       </Dialog>
 
@@ -493,6 +672,45 @@ export default function SessionsPage() {
           >
             {feedbackLoading ? 'Enviando...' : 'Enviar Calificación'}
           </Button>
+        </DialogActions>
+      </Dialog>
+      {/* Modal de sesiones por fecha */}
+      <Dialog 
+        open={!!selectedDateSessions} 
+        onClose={() => setSelectedDateSessions(null)} 
+        maxWidth="sm" 
+        fullWidth
+      >
+        <DialogTitle>
+          Sesiones del {selectedDateSessions?.date.format('DD/MM/YYYY')}
+        </DialogTitle>
+        <DialogContent>
+          {selectedDateSessions?.sessions.length === 0 ? (
+            <Typography color="text.secondary" align="center" sx={{ py: 2 }}>
+              No hay sesiones para esta fecha
+            </Typography>
+          ) : (
+            <Box display="flex" flexDirection="column" gap={2}>
+              {selectedDateSessions?.sessions.map((session) => (
+                <Card key={session._id} variant="outlined">
+                  <CardContent sx={{ p: 2 }}>
+                    <Typography variant="subtitle1" fontWeight="bold">
+                      {session.topic}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Estado: {getStatusText(session.status)}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Hora: {new Date(session.date).toLocaleTimeString('es-ES')}
+                    </Typography>
+                  </CardContent>
+                </Card>
+              ))}
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setSelectedDateSessions(null)}>Cerrar</Button>
         </DialogActions>
       </Dialog>
     </Container>
