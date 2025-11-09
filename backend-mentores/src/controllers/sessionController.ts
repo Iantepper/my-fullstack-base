@@ -10,6 +10,12 @@ export const createSession = async (req: AuthRequest, res: Response) => {
   try {
     const { mentorId, date, duration, topic, description } = req.body;
 
+    // ✅ VALIDACIÓN: No agendar en fechas pasadas
+    const sessionDate = new Date(date);
+    if (sessionDate < new Date()) {
+      return res.status(400).json({ message: 'No se pueden agendar sesiones en fechas pasadas' });
+    }
+
     // Verificar que el mentor existe
     const mentor = await Mentor.findById(mentorId).populate('userId');
     if (!mentor) {
@@ -28,7 +34,7 @@ export const createSession = async (req: AuthRequest, res: Response) => {
     const session = new Session({
       mentorId,
       menteeId: req.user?.userId,
-      date: new Date(date),
+      date: sessionDate,
       duration,
       topic,
       description,
@@ -168,6 +174,13 @@ export const updateSessionStatus = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ message: 'Sesión no encontrada' });
     }
 
+    // ✅ VALIDACIÓN: No completar sesiones futuras
+    if (status === 'completed' && new Date(session.date) > new Date()) {
+      return res.status(400).json({ 
+        message: 'No se pueden completar sesiones futuras. La sesión debe haber ocurrido primero.' 
+      });
+    }
+
     // Verificar permisos (solo el mentor puede confirmar/rechazar)
     const mentorProfile = await Mentor.findOne({ userId: req.user?.userId });
     if (!mentorProfile || session.mentorId.toString() !== (mentorProfile._id as mongoose.Types.ObjectId).toString()) {
@@ -211,6 +224,13 @@ export const cancelSession = async (req: AuthRequest, res: Response) => {
     const session = await Session.findById(id);
     if (!session) {
       return res.status(404).json({ message: 'Sesión no encontrada' });
+    }
+
+    // ✅ VALIDACIÓN: No cancelar sesiones ya completadas
+    if (session.status === 'completed') {
+      return res.status(400).json({ 
+        message: 'No se pueden cancelar sesiones ya completadas' 
+      });
     }
 
     // Verificar permisos (mentor o mentee de la sesión)
