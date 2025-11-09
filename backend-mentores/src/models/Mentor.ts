@@ -6,7 +6,6 @@ export interface IMentor extends Document {
   bio: string;
   experience: string;
   hourlyRate: number;
-  availability: string[];
   rating?: number;
   reviewCount: number;
   isAvailable: boolean;
@@ -37,10 +36,7 @@ const mentorSchema = new Schema<IMentor>({
     required: [true, 'La tarifa horaria es requerida'],
     min: 0
   },
-  availability: [{
-    type: String,
-    enum: ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo']
-  }],
+
   rating: {
     type: Number,
     default: 0,
