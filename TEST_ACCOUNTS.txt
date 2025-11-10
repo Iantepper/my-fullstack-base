@@ -1,0 +1,18 @@
+CREDENCIALES DE PRUEBA - MENTORES PRO
+=====================================
+
+MENTORES (Pueden configurar disponibilidad y aceptar sesiones):
+- laura@ejemplo.com / 123456
+- carlos@ejemplo.com / 123456  
+- ana@ejemplo.com / 123456
+- miguel@ejemplo.com / 123456
+- sofia@ejemplo.com / 123456
+
+MENTEES (Pueden agendar sesiones con mentores):
+- juan@ejemplo.com / 123456
+- maria@ejemplo.com / 123456
+- pedro@ejemplo.com / 123456  
+- lucia@ejemplo.com / 123456
+- diego@ejemplo.com / 123456
+
+TODAS LAS CONTRASEÑAS: 123456

@@ -8,7 +8,12 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "prettify": "prettier --write ./src"
+    "prettify": "prettier --write ./src",
+    "migrate:create": "migrate-mongo create -f migrate-mongo-config.js",
+    "migrate:up": "migrate-mongo up -f migrate-mongo-config.js",
+    "migrate:down": "migrate-mongo down -f migrate-mongo-config.js",
+    "migrate:status": "migrate-mongo status -f migrate-mongo-config.js",
+    "seed": "node scripts/seed-database.js"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
@@ -19,6 +24,9 @@
     "@mui/x-date-pickers-pro": "^8.16.0",
     "antd": "^5.27.3",
     "axios": "^1.12.2",
+    "bcryptjs": "^3.0.3",
+    "dotenv": "^17.2.3",
+    "migrate-mongo": "^12.1.3",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-router-dom": "^7.9.4"
