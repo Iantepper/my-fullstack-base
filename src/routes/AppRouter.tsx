@@ -7,6 +7,7 @@ import SessionsPage from "../modules/sessions/SessionsPage";
 import ProfilePage from "../modules/profile/ProfilePage";
 import MainLayout from "../components/layout/MainLayout";
 import MentorDetailPage from '../modules/mentors/MentorDetailPage';
+import AvailabilityPage from '../modules/availability/AvailabilityPage';
 
 export default function AppRouter() {
     return (
@@ -18,6 +19,7 @@ export default function AppRouter() {
                     <Route path="mentors" element={<MentorsPage />} />
                     <Route path="sessions" element={<SessionsPage />} />
                     <Route path="profile" element={<ProfilePage />} />
+                    <Route path="availability" element={<AvailabilityPage />} /> 
                     <Route path="/mentors/:id" element={<MentorDetailPage />} />
                 </Route>
                 {/* Rutas públicas (sin layout) */}

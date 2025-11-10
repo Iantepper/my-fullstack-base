@@ -12,7 +12,6 @@ export default function Navbar() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Verificar si hay un usuario autenticado al cargar el componente
     const user = authService.getCurrentUser();
     setCurrentUser(user);
   }, []);
@@ -43,6 +42,12 @@ export default function Navbar() {
               <Button color="inherit" component={RouterLink} to="/sessions">
                 Agenda
               </Button>
+              {/* ✅ NUEVO: Link a Disponibilidad solo para mentores */}
+              {currentUser.role === 'mentor' && (
+                <Button color="inherit" component={RouterLink} to="/availability">
+                  Mi Disponibilidad
+                </Button>
+              )}
               <Button color="inherit" component={RouterLink} to="/profile">
                 Perfil ({currentUser.name})
               </Button>

@@ -10,17 +10,16 @@ import {
   Container,
   CircularProgress,
   Alert,
-  TextField,
   Dialog,
   DialogTitle,
   DialogContent,
-  DialogActions,
   Avatar
 } from '@mui/material';
 import { ArrowBack, Star, AttachMoney, Schedule } from '@mui/icons-material';
 import { mentorService, Mentor } from '../../services/mentorService';
 import { sessionService } from '../../services/sessionService';
 import { authService } from '../../services/authService';
+import { SessionScheduler } from './components/SessionScheduler';
 
 export default function MentorDetailPage() {
   const { id } = useParams();
@@ -29,14 +28,8 @@ export default function MentorDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [bookingDialog, setBookingDialog] = useState(false);
-  const [bookingLoading, setBookingLoading] = useState(false);
+  // ❌ ELIMINADO: const [bookingLoading, setBookingLoading] = useState(false);
   const [bookingSuccess, setBookingSuccess] = useState('');
-  const [formData, setFormData] = useState({
-    date: '',
-    duration: 60,
-    topic: '',
-    description: ''
-  });
 
   useEffect(() => {
     if (id) {
@@ -54,37 +47,6 @@ export default function MentorDetailPage() {
       console.error('Error loading mentor:', err);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleBookSession = async () => {
-    if (!mentor) return;
-
-    try {
-      setBookingLoading(true);
-      setError('');
-      
-      await sessionService.createSession({
-        mentorId: mentor._id,
-        date: formData.date,
-        duration: formData.duration,
-        topic: formData.topic,
-        description: formData.description
-      });
-
-      setBookingSuccess('¡Sesión agendada exitosamente!');
-      setBookingDialog(false);
-      
-      // Redirigir a la página de sesiones después de 2 segundos
-      setTimeout(() => {
-        navigate('/sessions');
-      }, 2000);
-
-    } catch (err: unknown) {
-      setError('Error al agendar la sesión');
-      console.error('Error booking session:', err);
-    } finally {
-      setBookingLoading(false);
     }
   };
 
@@ -256,55 +218,44 @@ export default function MentorDetailPage() {
       )}
 
       {/* Booking Dialog */}
-      <Dialog open={bookingDialog} onClose={() => setBookingDialog(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Agendar Sesión con {mentor.userId.name}</DialogTitle>
+      <Dialog 
+        open={bookingDialog} 
+        onClose={() => setBookingDialog(false)} 
+        maxWidth="lg" 
+        fullWidth
+        sx={{ '& .MuiDialog-paper': { minHeight: '80vh' } }}
+      >
+        <DialogTitle>
+          Agendar Sesión con {mentor.userId.name}
+        </DialogTitle>
         <DialogContent>
-          <Box display="flex" flexDirection="column" gap={2} mt={1}>
-            <TextField
-              label="Fecha y Hora"
-              type="datetime-local"
-              value={formData.date}
-              onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-              InputLabelProps={{ shrink: true }}
-            />
-            
-            <TextField
-              label="Duración (minutos)"
-              type="number"
-              value={formData.duration}
-              onChange={(e) => setFormData({ ...formData, duration: Number(e.target.value) })}
-              helperText={`Costo estimado: $${(mentor.hourlyRate * (formData.duration / 60)).toFixed(2)}`}
-            />
-            
-            <TextField
-              label="Tema de la sesión"
-              value={formData.topic}
-              onChange={(e) => setFormData({ ...formData, topic: e.target.value })}
-              placeholder="Ej: Aprendiendo React desde cero"
-            />
-            
-            <TextField
-              label="Descripción (opcional)"
-              multiline
-              rows={3}
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              placeholder="Describe qué te gustaría aprender o trabajar en la sesión..."
-            />
-          </Box>
+          <SessionScheduler
+            mentorId={mentor._id}
+            hourlyRate={mentor.hourlyRate}
+            onSessionSelect={async (sessionData) => {
+              try {
+                setError('');
+                
+                await sessionService.createSession({
+                  mentorId: mentor._id,
+                  ...sessionData
+                });
+
+                setBookingSuccess('¡Sesión agendada exitosamente!');
+                setBookingDialog(false);
+                
+                setTimeout(() => {
+                  navigate('/sessions');
+                }, 2000);
+
+              } catch (err: unknown) {
+                setError('Error al agendar la sesión');
+                console.error('Error booking session:', err);
+              }
+            }}
+            onCancel={() => setBookingDialog(false)}
+          />
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setBookingDialog(false)} disabled={bookingLoading}>
-            Cancelar
-          </Button>
-          <Button 
-            onClick={handleBookSession} 
-            variant="contained"
-            disabled={bookingLoading || !formData.date || !formData.topic}
-          >
-            {bookingLoading ? 'Agendando...' : 'Confirmar Sesión'}
-          </Button>
-        </DialogActions>
       </Dialog>
     </Container>
   );
