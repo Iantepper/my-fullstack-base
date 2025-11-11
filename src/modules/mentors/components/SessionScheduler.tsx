@@ -230,7 +230,12 @@ export const SessionScheduler: React.FC<SessionSchedulerProps> = ({
                         margin="normal"
                       />
 
-                      <Box mt={2} p={2} bgcolor="grey.50" borderRadius={1}>
+                      <Box mt={2} p={2} borderRadius={1} sx={{ 
+  bgcolor: 'background.paper', 
+  boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+  border: '1px solid',
+  borderColor: 'divider'
+}}>
                         <Typography variant="subtitle2" gutterBottom>
                           Resumen de la sesión:
                         </Typography>

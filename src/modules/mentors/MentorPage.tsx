@@ -210,7 +210,7 @@ export default function MentorPage() {
                     DISPONIBILIDAD:
                   </Typography>
                   <Box display="flex" flexWrap="wrap" gap={0.5}>
-                    {mentor.availability.slice(0, 3).map((day, index) => (
+                    {(mentor.availability || []).slice(0, 3).map((day, index) => (
                       <Chip
                         key={index}
                         label={day}

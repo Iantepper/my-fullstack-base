@@ -10,7 +10,13 @@ export const getAllMentors = async (req: AuthRequest, res: Response) => {
       .populate('userId', 'name email avatar')
       .select('-__v');
 
-    res.json(mentors);
+    // ✅ AGREGAR: Convertir a objetos planos y agregar availability vacío
+    const mentorsWithCompatibility = mentors.map(mentor => ({
+      ...mentor.toObject(),
+      availability: [] // Array vacío para compatibilidad con frontend
+    }));
+
+    res.json(mentorsWithCompatibility);
   } catch (error) {
     console.error('Error obteniendo mentores:', error);
     res.status(500).json({ message: 'Error interno del servidor' });
@@ -28,7 +34,13 @@ export const getMentorById = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ message: 'Mentor no encontrado' });
     }
 
-    res.json(mentor);
+    // ✅ AGREGAR: Convertir a objeto plano y agregar availability vacío
+    const mentorWithCompatibility = {
+      ...mentor.toObject(),
+      availability: [] // Array vacío para compatibilidad con frontend
+    };
+
+    res.json(mentorWithCompatibility);
   } catch (error) {
     console.error('Error obteniendo mentor:', error);
     res.status(500).json({ message: 'Error interno del servidor' });
@@ -38,7 +50,7 @@ export const getMentorById = async (req: AuthRequest, res: Response) => {
 // Crear o actualizar perfil de mentor
 export const createOrUpdateMentorProfile = async (req: AuthRequest, res: Response) => {
   try {
-    const { expertise, bio, experience, hourlyRate, availability } = req.body;
+    const { expertise, bio, experience, hourlyRate } = req.body;
 
     // Verificar que el usuario existe y es un mentor
     const user = await User.findById(req.user?.userId);
@@ -53,7 +65,7 @@ export const createOrUpdateMentorProfile = async (req: AuthRequest, res: Respons
       // Actualizar perfil existente
       mentor = await Mentor.findByIdAndUpdate(
         mentor._id,
-        { expertise, bio, experience, hourlyRate, availability },
+        { expertise, bio, experience, hourlyRate },
         { new: true, runValidators: true }
       ).populate('userId', 'name email avatar');
     } else {
@@ -63,16 +75,26 @@ export const createOrUpdateMentorProfile = async (req: AuthRequest, res: Respons
         expertise,
         bio,
         experience,
-        hourlyRate,
-        availability
+        hourlyRate
       });
       await mentor.save();
       mentor = await mentor.populate('userId', 'name email avatar');
     }
 
+    // ✅ VERIFICACIÓN EXPLÍCITA: Asegurar que mentor no es null
+    if (!mentor) {
+      return res.status(500).json({ message: 'Error al guardar el perfil de mentor' });
+    }
+
+    // ✅ AGREGAR: Convertir a objeto plano y agregar availability vacío
+    const mentorWithCompatibility = {
+      ...mentor.toObject(),
+      availability: [] // Array vacío para compatibilidad
+    };
+
     res.status(200).json({
       message: 'Perfil de mentor guardado exitosamente',
-      mentor
+      mentor: mentorWithCompatibility
     });
   } catch (error) {
     console.error('Error creando/actualizando perfil de mentor:', error);
@@ -107,7 +129,13 @@ export const searchMentors = async (req: AuthRequest, res: Response) => {
       .select('-__v')
       .sort({ rating: -1 });
 
-    res.json(mentors);
+    // ✅ AGREGAR: Convertir a objetos planos y agregar availability vacío
+    const mentorsWithCompatibility = mentors.map(mentor => ({
+      ...mentor.toObject(),
+      availability: [] // Array vacío para compatibilidad con frontend
+    }));
+
+    res.json(mentorsWithCompatibility);
   } catch (error) {
     console.error('Error buscando mentores:', error);
     res.status(500).json({ message: 'Error interno del servidor' });
