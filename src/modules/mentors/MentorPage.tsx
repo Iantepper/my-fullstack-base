@@ -12,9 +12,10 @@ import {
   Alert,
   Button
 } from '@mui/material';
-import { Search, AttachMoney, Star } from '@mui/icons-material';
+import { Search, AttachMoney } from '@mui/icons-material';
 import { mentorService, Mentor } from '../../services/mentorService';
 import { useNavigate } from 'react-router-dom';
+import { Rating } from '@mui/material';
 
 export default function MentorPage() {
   const [mentors, setMentors] = useState<Mentor[]>([]);
@@ -154,25 +155,31 @@ export default function MentorPage() {
 
                 {/* Rating and Price */}
                 <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-                  <Box display="flex" alignItems="center">
-                    <Star sx={{ color: 'gold', mr: 0.5, fontSize: 18 }} />
-                    <Typography variant="body2" fontWeight="bold">
-                      {mentor.rating || 'Nuevo'}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ ml: 0.5 }}>
-                      ({mentor.reviewCount} reviews)
-                    </Typography>
-                  </Box>
-                  <Box display="flex" alignItems="center">
-                    <AttachMoney sx={{ fontSize: 18, color: 'success.main' }} />
-                    <Typography variant="h6" color="success.main" fontWeight="bold">
-                      {mentor.hourlyRate}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ ml: 0.5 }}>
-                      /hora
-                    </Typography>
-                  </Box>
-                </Box>
+  <Box display="flex" alignItems="center" gap={0.5}>
+    <Rating 
+      value={mentor.rating || 0} 
+      precision={0.1} 
+      readOnly 
+      size="small"
+      sx={{ mr: 0.5 }}
+    />
+    <Typography variant="body2" fontWeight="bold">
+      {mentor.rating ? mentor.rating.toFixed(1) : 'Nuevo'}
+    </Typography>
+    <Typography variant="body2" color="text.secondary" sx={{ ml: 0.5 }}>
+      ({mentor.reviewCount})
+    </Typography>
+  </Box>
+  <Box display="flex" alignItems="center">
+    <AttachMoney sx={{ fontSize: 18, color: 'success.main' }} />
+    <Typography variant="h6" color="success.main" fontWeight="bold">
+      {mentor.hourlyRate}
+    </Typography>
+    <Typography variant="body2" color="text.secondary" sx={{ ml: 0.5 }}>
+      /hora
+    </Typography>
+  </Box>
+</Box>
 
                 {/* Bio */}
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 2, lineHeight: 1.6 }}>

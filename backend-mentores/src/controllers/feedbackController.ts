@@ -1,9 +1,39 @@
 import { Response } from 'express';
 import mongoose from 'mongoose';
-import Feedback from '../models/Feedback';
+import Feedback, { IFeedback } from '../models/Feedback';
 import Session from '../models/Session';
 import Mentor from '../models/Mentor';
 import { AuthRequest } from '../middleware/auth';
+import Notification from '../models/Notification';
+
+const createFeedbackNotification = async (feedbackId: string) => {
+  try {
+    const feedback = await Feedback.findById(feedbackId)
+      .populate('sessionId', 'topic')
+      .populate('mentorId')
+      .populate('menteeId');
+
+    if (!feedback) return;
+
+    const session = feedback.sessionId as unknown as { 
+      _id: mongoose.Types.ObjectId; 
+      topic: string; 
+    };
+
+    const mentor = await Mentor.findById((feedback.mentorId as mongoose.Types.ObjectId));
+    if (mentor) {
+      await Notification.create({
+        userId: mentor.userId,
+        type: 'feedback_received',
+        title: 'Nueva reseña recibida',
+        message: `Has recibido una calificación de ${feedback.rating} estrellas para tu sesión sobre "${session.topic}"`,
+        relatedSession: session._id
+      });
+    }
+  } catch (error) {
+    console.error('Error creating feedback notification:', error);
+  }
+};
 
 // Crear feedback para una sesión
 export const createFeedback = async (req: AuthRequest, res: Response) => {
@@ -38,9 +68,10 @@ export const createFeedback = async (req: AuthRequest, res: Response) => {
       mentorId: session.mentorId,
       rating,
       comment
-    });
+    })as IFeedback;
 
     await feedback.save();
+    await createFeedbackNotification((feedback._id as mongoose.Types.ObjectId).toString());
 
     // Actualizar el rating promedio del mentor
     await updateMentorRating(session.mentorId);

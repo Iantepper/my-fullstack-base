@@ -58,7 +58,7 @@ export const sessionService = {
   },
 
   async cancelSession(sessionId: string): Promise<Session> {
-    const response = await api.patch<Session>(`/sessions/${sessionId}/status`, { status: 'cancelled' });
+    const response = await api.patch<Session>(`/sessions/${sessionId}/cancel`);
     return response.data;
   }
 };

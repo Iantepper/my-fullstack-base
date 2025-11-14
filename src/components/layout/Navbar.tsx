@@ -6,6 +6,7 @@ import Button from "@mui/material/Button";
 import { Link as RouterLink, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { authService, User } from "../../services/authService";
+import { NotificationBell } from "../notifications/NotificationBell";
 
 export default function Navbar() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -42,7 +43,10 @@ export default function Navbar() {
               <Button color="inherit" component={RouterLink} to="/sessions">
                 Agenda
               </Button>
-              {/* ✅ NUEVO: Link a Disponibilidad solo para mentores */}
+              
+              {/* ✅ AGREGAR CAMPANITA DE NOTIFICACIONES */}
+              <NotificationBell />
+              
               {currentUser.role === 'mentor' && (
                 <Button color="inherit" component={RouterLink} to="/availability">
                   Mi Disponibilidad

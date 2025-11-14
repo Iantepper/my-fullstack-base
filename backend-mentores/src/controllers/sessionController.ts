@@ -1,9 +1,61 @@
+// backend-mentores/src/controllers/sessionController.ts
 import { Response } from 'express';
-import Session from '../models/Session';
+import Session, { ISession } from '../models/Session';
 import Mentor from '../models/Mentor';
 import mongoose from 'mongoose';
-import User from '../models/User';
+import User, { IUser } from '../models/User';
 import { AuthRequest } from '../middleware/auth';
+import Notification from '../models/Notification';
+
+// ✅ INTERFACES para documentos populados
+interface PopulatedMentor {
+  _id: mongoose.Types.ObjectId;
+  userId: IUser;
+}
+
+interface PopulatedSession extends Omit<ISession, 'mentorId' | 'menteeId'> {
+  mentorId: PopulatedMentor;
+  menteeId: IUser;
+}
+
+// ✅ FUNCIÓN AUXILIAR para crear notificaciones
+const createSessionNotification = async (
+  sessionId: mongoose.Types.ObjectId, 
+  type: string, 
+  title: string, 
+  message: string
+) => {
+  try {
+    const session = await Session.findById(sessionId)
+      .populate<{ mentorId: PopulatedMentor }>('mentorId')
+      .populate<{ menteeId: IUser }>('menteeId') as PopulatedSession;
+    
+    if (!session) return;
+
+    // Notificación para el mentee
+    await Notification.create({
+      userId: session.menteeId._id,
+      type,
+      title,
+      message,
+      relatedSession: sessionId
+    });
+
+    // Notificación para el mentor
+    const mentor = await Mentor.findById(session.mentorId._id);
+    if (mentor) {
+      await Notification.create({
+        userId: mentor.userId,
+        type,
+        title,
+        message,
+        relatedSession: sessionId
+      });
+    }
+  } catch (error) {
+    console.error('Error creating notification:', error);
+  }
+};
 
 // Crear nueva sesión
 export const createSession = async (req: AuthRequest, res: Response) => {
@@ -17,7 +69,7 @@ export const createSession = async (req: AuthRequest, res: Response) => {
     }
 
     // Verificar que el mentor existe
-    const mentor = await Mentor.findById(mentorId).populate('userId');
+    const mentor = await Mentor.findById(mentorId).populate<{ userId: IUser }>('userId');
     if (!mentor) {
       return res.status(404).json({ message: 'Mentor no encontrado' });
     }
@@ -44,6 +96,13 @@ export const createSession = async (req: AuthRequest, res: Response) => {
 
     await session.save();
 
+    // ✅ AGREGAR NOTIFICACIÓN para nueva sesión creada
+await createSessionNotification(
+  session._id as mongoose.Types.ObjectId, // ✅ Agregar 'as mongoose.Types.ObjectId'
+  'session_created',
+  'Nueva sesión agendada',
+  `Se ha agendado una nueva sesión sobre "${topic}" para el ${new Date(sessionDate).toLocaleDateString()}`
+);
     // Populate para enviar datos completos
     const populatedSession = await Session.findById(session._id)
       .populate('mentorId', 'userId hourlyRate')
@@ -196,6 +255,35 @@ export const updateSessionStatus = async (req: AuthRequest, res: Response) => {
 
     await session.save();
 
+    // ✅ AGREGAR NOTIFICACIONES según el estado
+    let notificationType: string = '';
+    let notificationTitle: string = '';
+    let notificationMessage: string = '';
+
+    if (status === 'confirmed') {
+      notificationType = 'session_confirmed';
+      notificationTitle = 'Sesión confirmada';
+      notificationMessage = `Tu sesión sobre "${session.topic}" ha sido confirmada`;
+    } else if (status === 'cancelled') {
+      notificationType = 'session_cancelled';
+      notificationTitle = 'Sesión cancelada';
+      notificationMessage = `La sesión sobre "${session.topic}" ha sido cancelada`;
+    } else if (status === 'completed') {
+      notificationType = 'session_completed';
+      notificationTitle = 'Sesión completada';
+      notificationMessage = `La sesión sobre "${session.topic}" ha sido marcada como completada`;
+    }
+
+    // ✅ SOLO enviar notificación si los valores están definidos
+    if (notificationType && notificationTitle && notificationMessage) {
+      await createSessionNotification(
+        session._id as mongoose.Types.ObjectId,
+        notificationType,
+        notificationTitle,
+        notificationMessage
+      );
+    }
+
     const populatedSession = await Session.findById(session._id)
       .populate({
         path: 'mentorId',
@@ -226,18 +314,24 @@ export const cancelSession = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ message: 'Sesión no encontrada' });
     }
 
-    // ✅ VALIDACIÓN: No cancelar sesiones ya completadas
+    // ✅ VALIDACIÓN MODIFICADA: No cancelar sesiones ya completadas
     if (session.status === 'completed') {
       return res.status(400).json({ 
         message: 'No se pueden cancelar sesiones ya completadas' 
       });
     }
 
+    // ✅ VALIDACIÓN MODIFICADA: Mentee solo puede cancelar sesiones pendientes
+    const isMentee = session.menteeId.toString() === req.user?.userId;
+    if (isMentee && session.status !== 'pending') {
+      return res.status(400).json({ 
+        message: 'Solo puedes cancelar sesiones que están pendientes de confirmación' 
+      });
+    }
+
     // Verificar permisos (mentor o mentee de la sesión)
     const mentorProfile = await Mentor.findOne({ userId: req.user?.userId });
-    
     const isMentor = mentorProfile && session.mentorId.toString() === (mentorProfile._id as mongoose.Types.ObjectId).toString();
-    const isMentee = session.menteeId.toString() === req.user?.userId;
 
     if (!isMentor && !isMentee) {
       return res.status(403).json({ message: 'No tienes permisos para cancelar esta sesión' });
@@ -245,6 +339,14 @@ export const cancelSession = async (req: AuthRequest, res: Response) => {
 
     session.status = 'cancelled';
     await session.save();
+
+    // ✅ AGREGAR NOTIFICACIÓN de cancelación
+    await createSessionNotification(
+      session._id as mongoose.Types.ObjectId,
+      'session_cancelled',
+      'Sesión cancelada',
+      `La sesión sobre "${session.topic}" ha sido cancelada`
+    );
 
     res.json({
       message: 'Sesión cancelada exitosamente',

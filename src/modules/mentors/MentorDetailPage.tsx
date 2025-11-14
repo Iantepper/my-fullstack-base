@@ -20,6 +20,7 @@ import { mentorService, Mentor } from '../../services/mentorService';
 import { sessionService } from '../../services/sessionService';
 import { authService } from '../../services/authService';
 import { SessionScheduler } from './components/SessionScheduler';
+import { MentorReviews } from './components/MentorReviews';
 
 export default function MentorDetailPage() {
   const { id } = useParams();
@@ -257,6 +258,7 @@ export default function MentorDetailPage() {
           />
         </DialogContent>
       </Dialog>
+       <MentorReviews mentorId={mentor._id} />
     </Container>
   );
 }

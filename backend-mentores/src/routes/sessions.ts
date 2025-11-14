@@ -3,7 +3,8 @@ import {
   createSession, 
   getUserSessions, 
   getMentorSessions, 
-  updateSessionStatus 
+  updateSessionStatus,
+  cancelSession // ✅ AGREGAR ESTE IMPORT
 } from '../controllers/sessionController';
 import { authenticateToken, requireRole } from '../middleware/auth';
 
@@ -23,5 +24,8 @@ router.get('/mentor-sessions', requireRole('mentor'), getMentorSessions);
 
 // Actualizar estado de sesión (solo mentor)
 router.patch('/:id/status', requireRole('mentor'), updateSessionStatus);
+
+// Cancelar sesión (tanto mentor como mentee)
+router.patch('/:id/cancel', cancelSession);
 
 export default router;

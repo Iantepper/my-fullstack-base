@@ -140,4 +140,21 @@ export const searchMentors = async (req: AuthRequest, res: Response) => {
     console.error('Error buscando mentores:', error);
     res.status(500).json({ message: 'Error interno del servidor' });
   }
+
+  
+};
+export const getMyMentorProfile = async (req: AuthRequest, res: Response) => {
+  try {
+    const mentor = await Mentor.findOne({ userId: req.user?.userId })
+      .populate('userId', 'name email avatar');
+
+    if (!mentor) {
+      return res.status(404).json({ message: 'Perfil de mentor no encontrado' });
+    }
+
+    res.json(mentor);
+  } catch (error) {
+    console.error('Error obteniendo perfil de mentor:', error);
+    res.status(500).json({ message: 'Error interno del servidor' });
+  }
 };

@@ -56,5 +56,11 @@ export const mentorService = {
   async createOrUpdateMentorProfile(profileData: MentorProfileData): Promise<Mentor> {
     const response = await api.post<Mentor>('/mentors/profile', profileData);
     return response.data;
+  },
+
+  // ✅ MÉTODO NUEVO AGREGADO:
+  async getMyMentorProfile(): Promise<Mentor> {
+    const response = await api.get<Mentor>('/mentors/my-profile');
+    return response.data;
   }
 };
