@@ -73,6 +73,21 @@ const theme = createTheme({
         },
       },
     },
+MuiTooltip: {
+  styleOverrides: {
+    tooltip: {
+      backgroundColor: '#1A1A2E !important',
+      color: '#E2E8F0 !important',
+      border: '1px solid rgba(139, 95, 191, 0.3) !important',
+      fontSize: '0.8rem',
+      borderRadius: '8px',
+      boxShadow: '0 4px 20px rgba(0,0,0,0.3) !important',
+    },
+    arrow: {
+      color: '#1A1A2E !important',
+    }
+  },
+},
   },
 });
 

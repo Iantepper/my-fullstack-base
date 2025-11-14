@@ -30,10 +30,16 @@ export const BulkActions: React.FC<BulkActionsProps> = ({
 }) => {
 
   return (
-    <Box sx={{ p: 3, bgcolor: 'background.default', borderRadius: 2, border: '1px solid', borderColor: 'divider' }}>
-      <Typography variant="h6" gutterBottom fontWeight="bold">
-        Acciones Rápidas
-      </Typography>
+    <Box sx={{ 
+  p: 3, 
+  bgcolor: '#1A1A2E', // ✅ FONDO OSCURO
+  backgroundImage: 'linear-gradient(135deg, #1A1A2E 0%, #16213E 100%)',
+  borderRadius: 2, 
+  border: '1px solid rgba(139, 95, 191, 0.1)', // ✅ BORDE SUTIL
+}}>
+  <Typography variant="h6" gutterBottom fontWeight="bold" color="text.primary">
+    Acciones Rápidas
+  </Typography>
       
       <Box display="flex" flexDirection="column" gap={2}>
         {/* Acciones por período */}
@@ -99,19 +105,19 @@ export const BulkActions: React.FC<BulkActionsProps> = ({
             Horarios Populares:
           </Typography>
           <Box display="flex" gap={1} flexWrap="wrap">
-            {['09:00-10:00', '14:00-15:00', '18:00-19:00', '20:00-21:00'].map((timeSlot) => (
-              <Tooltip key={timeSlot} title={`Activar ${timeSlot} en toda la semana`}>
-                <Button
-                  variant="outlined"
-                  size="small"
-                  onClick={() => onToggleTimeSlotAllDays(timeSlot, true)}
-                  disabled={disabled}
-                  sx={{ fontSize: '0.75rem' }}
-                >
-                  {timeSlot}
-                </Button>
-              </Tooltip>
-            ))}
+            {['9:00', '14:00', '18:00', '20:00'].map((timeSlot) => ( // ← Solo la hora
+  <Tooltip key={timeSlot} title={`Activar ${timeSlot} en toda la semana`}>
+    <Button
+      variant="outlined"
+      size="small"
+      onClick={() => onToggleTimeSlotAllDays(`${timeSlot}:00-${parseInt(timeSlot)+1}:00`, true)}
+      disabled={disabled}
+      sx={{ fontSize: '0.75rem' }}
+    >
+      {timeSlot}
+    </Button>
+  </Tooltip>
+))}
           </Box>
         </Box>
       </Box>

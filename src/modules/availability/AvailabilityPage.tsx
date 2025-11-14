@@ -6,7 +6,7 @@ import {
   Alert,
   Button,
 } from '@mui/material';
-import { Save, Refresh } from '@mui/icons-material';
+import { Save } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { authService } from '../../services/authService';
 import { useAvailability } from './hooks/useAvailability';
@@ -28,7 +28,6 @@ export default function AvailabilityPage() {
     toggleTimeSlot,
     toggleDay,
     toggleTimeSlotAllDays,
-    initializeDefaultAvailability
   } = useAvailability();
 
   // Verificar que el usuario es mentor
@@ -118,14 +117,7 @@ export default function AvailabilityPage() {
         </Box>
         
         <Box display="flex" gap={2}>
-          <Button
-            variant="outlined"
-            startIcon={<Refresh />}
-            onClick={initializeDefaultAvailability}
-            disabled={loading || saving}
-          >
-            Reiniciar
-          </Button>
+          
           <Button
             variant="contained"
             startIcon={<Save />}
@@ -162,16 +154,25 @@ export default function AvailabilityPage() {
       />
 
       {/* Información adicional */}
-      <Box mt={4} p={3} bgcolor="info.light" borderRadius={2}>
-        <Typography variant="h6" gutterBottom color="info.dark">
-          💡 Consejos
-        </Typography>
-        <Typography variant="body2" color="info.dark">
-          • Los mentees podrán ver tu disponibilidad al agendar sesiones<br/>
-          • Mantén tu disponibilidad actualizada para recibir más solicitudes<br/>
-          • Puedes usar las acciones rápidas para configurar períodos comunes
-        </Typography>
-      </Box>
+      <Box 
+  mt={4} 
+  p={3} 
+  sx={{ 
+    bgcolor: 'rgba(139, 95, 191, 0.1)', // ✅ Fondo púrpura sutil
+    border: '1px solid rgba(139, 95, 191, 0.2)', // ✅ Borde púrpura
+    borderRadius: 2,
+    backdropFilter: 'blur(10px)'
+  }}
+>
+  <Typography variant="h6" gutterBottom color="primary.main">
+    💡 Consejos
+  </Typography>
+  <Typography variant="body2" color="text.secondary">
+    • Los mentees podrán ver tu disponibilidad al agendar sesiones<br/>
+    • Mantén tu disponibilidad actualizada para recibir más solicitudes<br/>
+    • Puedes usar las acciones rápidas para configurar períodos comunes
+  </Typography>
+</Box>
     </Container>
   );
 }
