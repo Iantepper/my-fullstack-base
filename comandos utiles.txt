@@ -1,0 +1,9 @@
+npx kill-port 4001
+choco install tree
+$ export PATH="$PATH:/c/Program Files (x86)/GnuWin32/bin"
+npm install
+
+tree -I "node_modules"
+npm run dev
+
+npm run seed

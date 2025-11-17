@@ -2,18 +2,89 @@
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     
-    <!-- ✅ FUENTE INTER -->
+    <!-- Meta Tags Básicos -->
+    <meta name="description" content="Plataforma de mentoring profesional - Conecta con expertos en tu área">
+    <meta name="keywords" content="mentores, aprendizaje, sesiones, feedback, desarrollo profesional">
+    <meta name="author" content="Mentores Pro">
+    
+    <!-- Open Graph -->
+    <meta property="og:title" content="Mentores Pro - Plataforma de Mentoring">
+    <meta property="og:description" content="Conecta con mentores expertos y acelera tu crecimiento profesional">
+    <meta property="og:image" content="/social-preview.jpg">
+    <meta property="og:url" content="https://mentorespro.com">
+    <meta property="og:type" content="website">
+    
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Mentores Pro">
+    <meta name="twitter:description" content="Conecta con mentores expertos">
+    
+    <!-- Favicon Moderno -->
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    <link rel="manifest" href="/site.webmanifest">
+    <meta name="theme-color" content="#3b82f6">
+    
+    <!-- Fuentes con Preload -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     
-    <title>Mentores Pro</title>
+    <!-- Estilos Críticos Inline -->
+    <style>
+      /* Critical CSS */
+      body { 
+        margin: 0; 
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        background: #f8fafc;
+      }
+      #root { 
+        min-height: 100vh; 
+        display: flex;
+        flex-direction: column;
+      }
+      
+      /* Loading State */
+      .app-loading {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        font-family: 'Inter', sans-serif;
+      }
+    </style>
+    
+    <title>Mentores Pro - Plataforma de Mentoring Profesional</title>
   </head>
   <body>
-    <div id="root"></div>
+    <!-- Google Tag Manager (noscript) -->
+    <noscript>
+      <iframe src="https://www.googletagmanager.com/ns.html?id=GTM-XXXXXX" height="0" width="0" style="display:none;visibility:hidden"></iframe>
+    </noscript>
+    
+    <div id="root">
+      <!-- Loading state inicial -->
+      <div class="app-loading">
+        <div style="text-align: center;">
+          <h2>Mentores Pro</h2>
+          <p>Cargando aplicación...</p>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Content for no JavaScript -->
+    <noscript>
+      <div style="text-align: center; padding: 3rem; font-family: 'Inter', sans-serif;">
+        <h1>Mentores Pro</h1>
+        <p>Para usar nuestra plataforma, necesitas habilitar JavaScript en tu navegador.</p>
+        <p>Consulta <a href="https://www.enable-javascript.com/es/">cómo habilitar JavaScript</a>.</p>
+      </div>
+    </noscript>
+    
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

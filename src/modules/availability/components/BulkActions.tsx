@@ -104,21 +104,24 @@ export const BulkActions: React.FC<BulkActionsProps> = ({
           <Typography variant="subtitle2" gutterBottom color="text.secondary">
             Horarios Populares:
           </Typography>
-          <Box display="flex" gap={1} flexWrap="wrap">
-            {['9:00', '14:00', '18:00', '20:00'].map((timeSlot) => ( // ← Solo la hora
-  <Tooltip key={timeSlot} title={`Activar ${timeSlot} en toda la semana`}>
-    <Button
-      variant="outlined"
-      size="small"
-      onClick={() => onToggleTimeSlotAllDays(`${timeSlot}:00-${parseInt(timeSlot)+1}:00`, true)}
-      disabled={disabled}
-      sx={{ fontSize: '0.75rem' }}
-    >
-      {timeSlot}
-    </Button>
-  </Tooltip>
-))}
-          </Box>
+<Box display="flex" gap={1} flexWrap="wrap">
+  {['09:00-10:00', '14:00-15:00', '18:00-19:00', '20:00-21:00'].map((timeSlot) => (
+    <Tooltip key={timeSlot} title={`Activar ${timeSlot} en toda la semana`}>
+      <Button
+        variant="outlined"
+        size="small"
+        onClick={() => {
+          console.log('🔍 Click en horario popular:', timeSlot);
+          onToggleTimeSlotAllDays(timeSlot, true);
+        }}
+        disabled={disabled}
+        sx={{ fontSize: '0.75rem' }}
+      >
+        {timeSlot.replace('-', ' - ')} {/* Muestra "09:00 - 10:00" */}
+      </Button>
+    </Tooltip>
+  ))}
+</Box>
         </Box>
       </Box>
     </Box>
