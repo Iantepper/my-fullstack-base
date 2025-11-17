@@ -1,3 +1,22 @@
+import '@mui/material/styles';
+import '@mui/material/Button';
+
+
+declare module '@mui/material/Button' {
+  interface ButtonPropsVariantOverrides {
+    pulse: true;
+  }
+}
+
+declare module '@mui/material/Button' {
+  interface ButtonPropsVariantOverrides {
+    pulse: true;
+    gradient: true;
+    neon: true;
+    soft: true;
+  }
+}
+
 export interface Notification {
   _id: string;
   type: 'session_confirmed' | 'session_cancelled' | 'session_completed' | 'feedback_received' | 'session_created';

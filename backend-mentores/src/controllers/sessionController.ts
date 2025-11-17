@@ -32,7 +32,7 @@ const createSessionNotification = async (
     
     if (!session) return;
 
-    // Notificación para el mentee
+    // Notificación para el mentee (siempre se envía)
     await Notification.create({
       userId: session.menteeId._id,
       type,
@@ -41,16 +41,18 @@ const createSessionNotification = async (
       relatedSession: sessionId
     });
 
-    // Notificación para el mentor
-    const mentor = await Mentor.findById(session.mentorId._id);
-    if (mentor) {
-      await Notification.create({
-        userId: mentor.userId,
-        type,
-        title,
-        message,
-        relatedSession: sessionId
-      });
+    // ✅ MODIFICACIÓN: NO enviar notificación al mentor cuando la sesión se completa
+    if (type !== 'session_completed') {
+      const mentor = await Mentor.findById(session.mentorId._id);
+      if (mentor) {
+        await Notification.create({
+          userId: mentor.userId,
+          type,
+          title,
+          message,
+          relatedSession: sessionId
+        });
+      }
     }
   } catch (error) {
     console.error('Error creating notification:', error);
