@@ -1,0 +1,1302 @@
+1) Mostrá un ejemplo en tu proyecto donde un componente es inyectado en otro con
+@Autowired o mediante el constructor.Explicá cómo esta inyección de dependencias
+implementa el principio de versaion de control
+    2) En tu proyecto: ¿está separado el frontend del backend? Justificar el por qué y mostrar un ejemplo, en cualquiera de los casos (Sí/No).
+    3) Mostrá un ejemplo de tu aplicación donde se guarden o lean datos de sesión. Explicá cómo se mantiene la información del usuario entre distintas peticiones HTTP.
+    4) Listá las capas que componen tu backend e indicá la función de cada una. 
+5)Mostrar un lugar de tu backend donde se reciban parámetros de ruta (route params) y otra
+donde se reciban parámetros de consulta (query params). Colocar una URL de ejemplo que
+aplique en cada uno de los casos.
+Perfecto, voy a explicar estrictamente con tu proyecto y los conceptos específicos de la pregunta.
+1) Análisis de tu proyecto - ¿Dónde hay inyección de dependencias?
+En tu código ACTUAL:
+NO usas @Autowired ni inyección automática, pero SÍ tienes un patrón de dependencias manual. Veamos ejemplos:
+Ejemplo en ProcesarApuestaServlet.java:
+java
+// Líneas 47-52 de tu código:
+UsuarioService usuarioService = null;
+ApuestaRepository apuestaRepo = null;
+ResultadoRepository resultadoRepo = null;
+
+try {
+    // Aquí INYECTAS/INSTANCIAS las dependencias MANUALMENTE
+    usuarioService = new UsuarioService();          // ← Inyección
+    apuestaRepo = new ApuestaRepository();          // ← Inyección  
+    resultadoRepo = new ResultadoRepository();      // ← Inyección
+    
+    // Ahora usas esas dependencias
+    double saldoActual = usuarioService.getDineroPorIdUsuario(...);
+    apuestaRepo.guardar(apuesta);
+¿Esto es IoC (Inversión de Control)?
+Sí, pero parcialmente. Veamos por qué:
+
+2) ¿Qué es IoC (Inversión de Control)?
+Concepto simple:
+Normalmente, cuando un objeto A necesita usar un objeto B:
+    1. A crea B (control está en A)
+    2. Con IoC: A recibe B ya creado (el control de crear B está INVERTIDO - no lo hace A)
+Ejemplo concreto de TU proyecto:
+Sin IoC (si hicieras todo en el Servlet):
+java
+public class ProcesarApuestaServlet {
+    // El Servlet hace TODO
+    public void procesar() {
+        // 1. Conexión a DB
+        Connection conn = DriverManager.getConnection(...);
+        // 2. Ejecuta query
+        // 3. Cálculos de apuestas
+        // 4. Actualiza saldo
+        // 5. Cierra conexión
+    }
+}
+Con IoC (como lo tienes):
+java
+public class ProcesarApuestaServlet {
+    public void procesar() {
+        // 1. Pides el servicio (UsuarioService) ← NO lo creas tú
+        UsuarioService usuarioService = new UsuarioService();  // ← Aquí el servicio SÍ crea sus propias dependencias
+        
+        // 2. Usas el servicio
+        usuarioService.getDineroPorIdUsuario(...);
+        // El control de CÓMO se obtiene el dinero está INVERTIDO: no lo controla el Servlet
+    }
+}
+Pero el IoC completo sería:
+java
+public class ProcesarApuestaServlet {
+    // El servicio viene INYECTADO (no lo creas)
+    private UsuarioService usuarioService;
+    
+    // Constructor con inyección
+    public ProcesarApuestaServlet(UsuarioService usuarioService) {
+        this.usuarioService = usuarioService;  // ← IoC REAL: recibes la dependencia
+    }
+}
+
+3) ¿Cómo implementas la Inversión de Control en tu proyecto?
+Niveles de IoC en tu código:
+Nivel 1: Repositorios (ApuestaRepository.java, UsuarioRepository.java)
+java
+public class ApuestaRepository {
+    // Aquí SÍ hay IoC: el Repository recibe EntityManager
+    // (aunque en tu código no se ve, probablemente uses EntityManagerUtil)
+    
+    // El Repository NO controla cómo se obtiene la conexión a DB
+    // Solo la USA - eso es IoC
+}
+Nivel 2: Servicios (UsuarioService.java)
+java
+public class UsuarioService {
+    // Probablemente tengas algo como:
+    private UsuarioRepository usuarioRepository;
+    
+    public UsuarioService() {
+        // Aquí creas el Repository, pero el SERVICE
+        // NO SABE cómo el Repository accede a la DB
+        // Solo sabe que PUEDE pedir datos
+        this.usuarioRepository = new UsuarioRepository();
+    }
+}
+Nivel 3: Servlets
+java
+public class ProcesarApuestaServlet {
+    protected void doPost(...) {
+        // El Servlet NO sabe:
+        // - Cómo UsuarioService obtiene el dinero
+        // - Cómo ApuestaRepository guarda en DB
+        // - Cómo se manejan las transacciones
+        
+        // Solo SABE que puede USAR esos servicios
+        usuarioService.getDineroPorIdUsuario(...);
+        apuestaRepo.guardar(...);
+        
+        // El CONTROL de CÓMO se hacen esas operaciones
+        // está INVERTIDO: no lo tiene el Servlet
+    }
+}
+
+4) Ejemplo concreto de inversión de control - Flujo de datos
+Tu flujo actual:
+text
+Usuario en JSP (apuesta.jsp) 
+    ↓
+Servlet (ProcesarApuestaServlet)  ← Control PRINCIPAL
+    ↓
+Crea → UsuarioService              ← IoC: el Service controla CÓMO obtener dinero
+    ↓
+Crea → ApuestaRepository           ← IoC: el Repository controla CÓMO guardar en DB
+    ↓
+EntityManagerUtil                  ← IoC: controla CÓMO conectar a la DB
+    ↓
+Base de datos (apuesta.sql)
+¿Dónde está la "inversión"?
+El Servlet (controlador principal) NO:
+    1. ❌ Abre conexiones a DB directamente
+    2. ❌ Ejecuta queries SQL
+    3. ❌ Maneja transacciones
+    4. ❌ Calcula saldos complejos
+En cambio DELEGA (invierte el control) a:
+    1. ✅ UsuarioService → que controla la lógica de negocio
+    2. ✅ ApuestaRepository → que controla el acceso a datos
+    3. ✅ EntityManager → que controla la persistencia
+
+5) Respondiendo específicamente a la pregunta
+Pregunta: "Mostrá un ejemplo donde un componente es inyectado en otro"
+En tu proyecto NO hay inyección automática, pero SÍ hay creación manual que simula el patrón:
+java
+// En ProcesarApuestaServlet.doPost():
+UsuarioService usuarioService = new UsuarioService();  
+// ↑ Esto NO es inyección, es creación
+
+// Pero dentro de UsuarioService probablemente haya:
+public class UsuarioService {
+    private UsuarioRepository usuarioRepository;
+    
+    public UsuarioService() {
+        this.usuarioRepository = new UsuarioRepository();  
+        // ↑ El Service "inyecta/crea" su propio Repository
+    }
+}
+Pregunta: "Explicá cómo esta inyección implementa IoC"
+Respuesta con tu código:
+    1. Inversión del control de persistencia:
+        ◦ El Servlet no accede directamente a la DB
+        ◦ Control invertido al Repository
+    2. Inversión del control de lógica de negocio:
+        ◦ El Servlet no calcula saldos
+        ◦ Control invertido al Service
+    3. Inversión del control de validaciones:
+        ◦ El Servlet no valida reglas complejas
+        ◦ Control invertido a métodos especializados
+
+6) Conclusión para tu examen
+Para responder en el parcial:
+"En mi proyecto de apuestas, implemento la Inversión de Control mediante el patrón Repository-Service. Por ejemplo, en ProcesarApuestaServlet, cuando un usuario hace una apuesta:
+    1. El Servlet recibe la petición HTTP pero NO maneja la lógica directamente
+    2. En su lugar, crea instancias de UsuarioService y ApuestaRepository
+    3. Estos componentes tienen el control de:
+        ◦ UsuarioService: Validar saldo, actualizar dinero
+        ◦ ApuestaRepository: Persistir en la base de datos
+    4. El Servlet simplemente orquesta estos servicios, invirtiendo el control de las operaciones específicas a los componentes especializados
+Esto sigue el principio IoC porque el componente de más alto nivel (Servlet) no controla cómo se ejecutan las operaciones, solo cuándo y en qué orden, delegando el cómo a componentes de menor nivel."
+Qué NO tienes (pero podrías mencionar):
+    • ❌ No usas @Autowired (eso sería Spring)
+    • ❌ No tienes un contenedor IoC
+    • ❌ No tienes inyección automática
+Qué SÍ tienes:
+    • ✅ Separación de responsabilidades
+    • ✅ Delegación de control
+    • ✅ Patrón Repository
+    • ✅ Inversión de control manual/implícita
+Tu proyecto tiene IoC de forma conceptual/arquitectónica, aunque no mediante anotaciones o frameworks específicos.
+src\main\java\com\mycompany\apuestatodook\model\ApuestaRepository.java te paso un repository pàra que peudas explicarte mejor, pedime archivos si los necesitas package com.mycompany.apuestatodook.model; import jakarta.persistence.EntityManager; import jakarta.persistence.TypedQuery; import java.util.List; public class ApuestaRepository { private EntityManager em; public ApuestaRepository() { this.em = EntityManagerUtil.getEntityManagerFactory().createEntityManager(); } public void guardar(Apuesta apuesta) { try { em.getTransaction().begin(); em.persist(apuesta); em.getTransaction().commit(); } catch (Exception e) { if (em.getTransaction().isActive()) { em.getTransaction().rollback(); } throw new RuntimeException("Error al guardar apuesta", e); } } public void actualizarEstado(Apuesta apuesta) { try { em.getTransaction().begin(); em.merge(apuesta); em.getTransaction().commit(); } catch (Exception e) { if (em.getTransaction().isActive()) { em.getTransaction().rollback(); } throw new RuntimeException("Error al actualizar estado de apuesta", e); } } public List<Apuesta> obtenerTodasConDetalles() { TypedQuery<Apuesta> query = em.createQuery( "SELECT a FROM Apuesta a " + "LEFT JOIN FETCH a.usuario " + "LEFT JOIN FETCH a.partido " + "LEFT JOIN FETCH a.resultado " + "ORDER BY a.idApuesta DESC", Apuesta.class ); List<Apuesta> apuestas = query.getResultList(); for (Apuesta apuesta : apuestas) { if (apuesta.getPartido() != null) { apuesta.setLocal(apuesta.getPartido().getLocal()); apuesta.setVisitante(apuesta.getPartido().getVisitante()); apuesta.setFecha(apuesta.getPartido().getFecha()); } if (apuesta.getUsuario() != null) { apuesta.setNombreUsuario(apuesta.getUsuario().getUsuario()); } } return apuestas; } public List<Apuesta> obtenerPorUsuarioConDetalles(int idUsuario) { TypedQuery<Apuesta> query = em.createQuery( "SELECT a FROM Apuesta a " + "LEFT JOIN FETCH a.partido " + "LEFT JOIN FETCH a.resultado " + "WHERE a.fkIdUsuario = :idUsuario " + "ORDER BY a.idApuesta DESC", Apuesta.class ); query.setParameter("idUsuario", idUsuario); List<Apuesta> apuestas = query.getResultList(); for (Apuesta apuesta : apuestas) { if (apuesta.getPartido() != null) { apuesta.setLocal(apuesta.getPartido().getLocal()); apuesta.setVisitante(apuesta.getPartido().getVisitante()); apuesta.setFecha(apuesta.getPartido().getFecha()); } } return apuestas; } public Apuesta obtenerPorId(int idApuesta) { return em.find(Apuesta.class, idApuesta); } public void procesarApuestasPorResultado(int idPartido, String ganadorReal) { try { em.getTransaction().begin(); TypedQuery<Apuesta> query = em.createQuery( "SELECT a FROM Apuesta a WHERE a.fkIdPartido = :idPartido AND a.estado = 'A'", Apuesta.class ); query.setParameter("idPartido", idPartido); List<Apuesta> apuestasActivas = query.getResultList(); for (Apuesta apuesta : apuestasActivas) { if (ganadorReal.equals(apuesta.getpor_quien())) { apuesta.setEstado('G'); // Ganada } else { apuesta.setEstado('P'); // Perdida } } em.getTransaction().commit(); System.out.println("✅ Procesadas " + apuestasActivas.size() + " apuestas para partido " + idPartido); } catch (Exception e) { if (em.getTransaction().isActive()) { em.getTransaction().rollback(); } throw new RuntimeException("Error al procesar apuestas", e); } } public void close() { if (em != null && em.isOpen()) { em.close(); } } }
+¡Excelente! Con el código del ApuestaRepository puedo explicar mucho mejor los conceptos. Ahora sí, veamos estrictamente con tu código:
+1) INYECCIÓN DE DEPENDENCIAS en tu ApuestaRepository
+¿Dónde se inyecta? - Mira el constructor:
+java
+public class ApuestaRepository {
+    
+    private EntityManager em;  // ← DEPENDENCIA
+    
+    public ApuestaRepository() {
+        // Aquí INYECTAS la dependencia MANUALMENTE
+        this.em = EntityManagerUtil.getEntityManagerFactory().createEntityManager();  // ← INYECCIÓN
+    }
+}
+¿Qué es esta "inyección"?
+    • ApuestaRepository NO crea su propio EntityManager
+    • RECIBE el EntityManager de EntityManagerUtil
+    • Esto es Inyección de Dependencias (aunque manual)
+
+2) ¿Cómo esto implementa IoC (Inversión de Control)?
+Sin IoC (si no tuvieras el patrón):
+java
+public class ApuestaRepository {
+    
+    // El Repository CREA TODO
+    public ApuestaRepository() {
+        // 1. Configura la conexión
+        // 2. Abre conexión a DB
+        // 3. Maneja transacciones
+        // 4. TODO el control está AQUÍ
+    }
+}
+Con IoC (como lo tienes):
+java
+public class ApuestaRepository {
+    
+    private EntityManager em;  // ← DEPENDENCIA INYECTADA
+    
+    public ApuestaRepository() {
+        // NO controla CÓMO se crea el EntityManager
+        // Solo LO PIDE a EntityManagerUtil
+        this.em = EntityManagerUtil.getEntityManagerFactory().createEntityManager();
+        // ↑ El CONTROL de crear/manejar conexiones está INVERTIDO
+        //   NO está en Repository, está en EntityManagerUtil
+    }
+}
+
+3) FLUJO COMPLETO de IoC en tu proyecto
+Caso concreto: Guardar una apuesta
+text
+Usuario hace apuesta en apuesta.jsp
+    ↓
+ProcesarApuestaServlet.doPost()  ← (1) Control PRINCIPAL inicia
+    ↓
+Crea: new ApuestaRepository()    ← (2) Servlet CREA el Repository
+    ↓
+ApuestaRepository constructor:   ← (3) Repository NO crea EntityManager
+    this.em = EntityManagerUtil.getEntityManagerFactory().createEntityManager()
+    ↓
+EntityManagerUtil                ← (4) CONTROL INVERTIDO aquí
+    (maneja conexiones, pool, config de JPA)
+    ↓
+Base de datos
+¿Dónde está la INVERSIÓN?
+    1. El Servlet → Invierte control de persistencia al Repository
+    2. El Repository → Invierte control de conexiones a EntityManagerUtil
+    3. EntityManagerUtil → Tiene el control REAL de la persistencia
+
+4) EJEMPLOS CONCRETOS de tu código
+Ejemplo 1: guardar(Apuesta apuesta)
+java
+public void guardar(Apuesta apuesta) {
+    try {
+        em.getTransaction().begin();     // ← Usa el EntityManager INYECTADO
+        em.persist(apuesta);             // ← NO SABE cómo persiste, solo USA
+        em.getTransaction().commit();    // ← El CONTROL de la transacción está INVERTIDO
+    } catch (Exception e) {
+        if (em.getTransaction().isActive()) {
+            em.getTransaction().rollback();  // ← Control invertido
+        }
+        throw new RuntimeException("Error al guardar apuesta", e);
+    }
+}
+IoC aquí: El Repository:
+    • ❌ NO abre conexión a DB
+    • ❌ NO configura transacciones
+    • ❌ NO maneja el pool de conexiones
+    • ✅ SOLO USA lo que le fue inyectado (em)
+Ejemplo 2: obtenerTodasConDetalles()
+java
+public List<Apuesta> obtenerTodasConDetalles() {
+    TypedQuery<Apuesta> query = em.createQuery(  // ← Usa em INYECTADO
+        "SELECT a FROM Apuesta a " +
+        "LEFT JOIN FETCH a.usuario " +
+        "LEFT JOIN FETCH a.partido " +
+        "LEFT JOIN FETCH a.resultado " +
+        "ORDER BY a.idApuesta DESC", 
+        Apuesta.class
+    );
+    
+    return query.getResultList();  // ← El CONTROL de ejecutar la query está INVERTIDO
+}
+
+5) PATRÓN COMPLETO de Inyección en tu arquitectura
+Capa por capa:
+Capa	Componente	¿Qué inyecta?	¿De dónde?
+Web	ProcesarApuestaServlet	UsuarioService, ApuestaRepository	Los crea con new
+Service	UsuarioService	UsuarioRepository	Lo crea internamente
+Repository	ApuestaRepository	EntityManager	De EntityManagerUtil
+Util	EntityManagerUtil	Configuración JPA	De persistence.xml
+Línea de inyección:
+text
+Servlet → Service → Repository → EntityManager → DB
+   ↓         ↓         ↓           ↓
+new()      new()    EntityManagerUtil   persistence.xml
+
+6) RESPONDIENDO LA PREGUNTA DEL PARCIAL
+Para tu examen, podés decir:
+"En mi proyecto de apuestas, implemento Inyección de Dependencias de forma manual en el ApuestaRepository.
+Ejemplo concreto:
+java
+public class ApuestaRepository {
+    private EntityManager em;  // DEPENDENCIA
+    
+    public ApuestaRepository() {
+        // INYECCIÓN MANUAL de dependencia
+        this.em = EntityManagerUtil.getEntityManagerFactory().createEntityManager();
+    }
+}
+Esto implementa Inversión de Control porque:
+    1. El ApuestaRepository NO controla cómo se crea el EntityManager
+    2. Solo RECIBE el EntityManager ya configurado
+    3. El control de la creación/configuración de conexiones a BD está INVERTIDO:
+        ◦ Antes: Repository controlaba todo (abrir/conectar/cerrar)
+        ◦ Ahora: EntityManagerUtil controla, Repository solo usa
+El Repository delega (invierte) el control de la persistencia al EntityManager, siguiendo el Principio de Responsabilidad Única y permitiendo:
+    • Facilidad para cambiar de JPA a otro ORM
+    • Testing más simple (podría inyectar un EntityManager mock)
+    • Mantenimiento separado de lógica de negocio y persistencia"
+
+7) DIFERENCIA CLAVE para entender
+Tu implementación:
+java
+// INYECCIÓN MANUAL
+public ApuestaRepository() {
+    this.em = EntityManagerUtil.getEntityManagerFactory().createEntityManager();
+}
+Con Spring/@Autowired:
+java
+// INYECCIÓN AUTOMÁTICA
+@Repository
+public class ApuestaRepository {
+    
+    @Autowired  // ← Spring INYECTA automáticamente
+    private EntityManager em;
+    
+    // No necesitas constructor, Spring lo hace
+}
+Con inyección por constructor (lo ideal):
+java
+public class ApuestaRepository {
+    
+    private final EntityManager em;
+    
+    // CONSTRUCTOR con inyección explícita
+    public ApuestaRepository(EntityManager em) {  // ← Te INYECTAN la dependencia
+        this.em = em;  // No la creas, la recibes
+    }
+}
+
+8) CONCLUSIÓN para tu parcial
+Tienes IoC e Inyección de Dependencias:
+    • ✅ SÍ hay inyección: EntityManager se inyecta en ApuestaRepository
+    • ✅ SÍ hay IoC: El control de la persistencia está invertido a EntityManagerUtil
+    • ✅ SÍ es patrón Repository con dependencias
+Pero es MANUAL, no automática con @Autowired.
+Para el examen: Podés explicar que aunque no usás Spring, implementás el concepto de IoC mediante la separación en capas y la delegación de responsabilidades, donde cada componente recibe (inyección manual) lo que necesita para funcionar, en lugar de crearlo todo por sí mismo.
+2) En tu proyecto: ¿está separado el frontend del backend? Justificar el por qué y mostrar un ejemplo, en cualquiera de los casos (Sí/No).
+RESPUESTA: NO, el frontend y backend NO están separados
+En tu proyecto, frontend y backend están acoplados/mezclados en la misma aplicación. Veamos por qué:
+
+1) ARQUITECTURA ACTUAL - MVC Clásico de Jakarta EE
+Tu estructura:
+text
+src/main/java/com/mycompany/apuestatodook/   ← BACKEND (Servlets, Modelos)
+src/main/webapp/WEB-INF/jsp/                 ← FRONTEND (Vistas JSP)
+Conexión directa:
+    • Los Servlets (backend) procesan la lógica
+    • Los JSPs (frontend) muestran la vista
+    • Todo en el mismo WAR, mismo servidor, misma aplicación
+
+2) EJEMPLOS CONCRETOS de tu código que muestran el ACOPLAMIENTO
+Ejemplo 1: ProcesarApuestaServlet.java → apuesta.jsp
+Flujo acoplado:
+java
+// BACKEND - En ProcesarApuestaServlet
+protected void doPost(...) {
+    // 1. Procesa lógica (backend)
+    Apuesta apuesta = new Apuesta(...);
+    apuestaRepo.guardar(apuesta);
+    
+    // 2. Prepara datos para la vista
+    request.setAttribute("apuesta", apuesta);
+    request.setAttribute("premio", apuesta.getMonto() * 2);
+    
+    // 3. Redirige a JSP (frontend MEZCLADO)
+    request.getRequestDispatcher("WEB-INF/jsp/ApuestaCreada.jsp").forward(request, response);
+    // ↑ FRONTEND y BACKEND en la misma solicitud
+}
+Ejemplo 2: apuesta.jsp - Frontend con lógica backend
+html
+<!-- FRONTEND que depende directamente del backend -->
+<%@ taglib uri="jakarta.tags.core" prefix="c" %>
+
+<!-- Usa atributos SETEADOS por el Servlet -->
+<c:if test="${hayError}">
+    <div class="alert alert-error">
+        ${mensajeError}  <!-- Variable del Servlet -->
+    </div>
+</c:if>
+
+<!-- Formulario que llama DIRECTAMENTE al Servlet -->
+<form action="SvprocesarApuesta" method="POST">
+    <!-- Parámetros que el Servlet espera -->
+    <input type="hidden" name="idPartido" value="${partido.idPartido}">
+    <input type="hidden" name="por" value="local">
+    
+    <button type="submit">Apostar</button>
+</form>
+
+3) CARACTERÍSTICAS que muestran NO separación
+3.1. Compartiendo sesión HTTP:
+java
+// En BilleteraServlet.java
+UsuarioBase usuario = (UsuarioBase) request.getSession().getAttribute("userLogueado");
+// ↑ Misma sesión para frontend y backend
+3.2. JSPs con lógica:
+jsp
+<!-- En partidos.jsp -->
+<c:choose>
+    <c:when test="${esAdmin}">
+        <!-- Lógica de presentación MEZCLADA con lógica de negocio -->
+        <table class="table">
+            <c:forEach items="${listaDePartidos}" var="partido">
+                <!-- El JSP ITERA datos que vienen del backend -->
+    </c:when>
+    <c:otherwise>
+        <!-- Vista diferente según lógica -->
+3.3. Servlets que renderizan vistas:
+java
+// TODOS tus Servlets hacen esto:
+request.getRequestDispatcher("WEB-INF/jsp/[algo].jsp").forward(request, response);
+// ↑ El backend GENERA el HTML
+
+4) ¿Cómo sería si estuvieran SEPARADOS?
+Arquitectura separada (que NO tienes):
+text
+APLICACIÓN 1: Backend API (Java/Spring)
+    - Servicios REST (@RestController)
+    - Devuelve JSON/XML
+    - Ej: http://localhost:8080/api/apuestas
+
+APLICACIÓN 2: Frontend (React/Angular/HTML+JS)
+    - Aplicación web estática
+    - Hace fetch() a la API
+    - Ej: http://localhost:3000
+Ejemplo de cómo NO lo haces (pero se haría separado):
+Backend (API REST):
+java
+@RestController
+public class ApuestaController {
+    
+    @PostMapping("/api/apuestas")
+    public ResponseEntity<ApuestaResponse> crearApuesta(@RequestBody ApuestaRequest request) {
+        // Solo lógica, devuelve JSON
+        Apuesta apuesta = service.crearApuesta(request);
+        return ResponseEntity.ok(new ApuestaResponse(apuesta));
+    }
+}
+Frontend (JavaScript):
+javascript
+// En app.js
+async function hacerApuesta() {
+    const response = await fetch('http://localhost:8080/api/apuestas', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            monto: 100,
+            idPartido: 5,
+            por: "local"
+        })
+    });
+    
+    const data = await response.json();
+    // Actualiza la UI con JavaScript
+    mostrarApuestaCreada(data);
+}
+
+5) VENTAJAS de tu enfoque (no separado) para un proyecto académico
+Por qué está bien que NO estén separados:
+    1. Simplicidad: Un solo proyecto, una sola aplicación
+    2. Facilidad de desarrollo: No necesitás dos servidores
+    3. Sesión compartida: Login/autorización más simple
+    4. Rendimiento: Menos latencia (no hay llamadas HTTP entre front/back)
+    5. Adecuado para el scope: Para un parcial, es la opción correcta
+Desventajas (que no importan en tu caso):
+    • ❌ Frontend y backend acoplados
+    • ❌ Difícil reutilizar API para móvil
+    • ❌ Menos escalable
+    • ❌ Equipos no pueden trabajar en paralelo
+
+6) EJEMPLO MÁS CLARO de acoplamiento
+Mira ApuestaMostrarServlet.java (si existe) o el flujo:
+java
+// 1. Servlet obtiene datos (backend)
+List<Apuesta> apuestas = apuestaRepo.obtenerPorUsuarioConDetalles(usuarioId);
+
+// 2. Pone datos en request (backend)
+request.setAttribute("apuestas", apuestas);
+request.setAttribute("usuario", usuario);
+
+// 3. Pasa a JSP que MEZCLA lógica y vista (frontend)
+request.getRequestDispatcher("WEB-INF/jsp/apuestasMostrar.jsp").forward(...);
+jsp
+<!-- apuestasMostrar.jsp -->
+<table>
+    <c:forEach items="${apuestas}" var="apuesta">
+        <tr>
+            <td>${apuesta.local} vs ${apuesta.visitante}</td>
+            <td>
+                <c:choose>
+                    <c:when test="${apuesta.estado == 'G'}">
+                        <span class="ganada">GANADA</span>
+                    </c:when>
+                    <c:when test="${apuesta.estado == 'P'}">
+                        <span class="perdida">PERDIDA</span>
+                    </c:when>
+                    <c:otherwise>
+                        <span class="pendiente">PENDIENTE</span>
+                    </c:otherwise>
+                </c:choose>
+            </td>
+        </tr>
+    </c:forEach>
+</table>
+Aquí se ve claramente:
+    • El JSP depende de los atributos del Servlet
+    • La vista contiene lógica (c:choose, c:when)
+    • No hay separación de responsabilidades completa
+
+7) CONCLUSIÓN para el parcial
+Respuesta directa: "No, en mi proyecto el frontend y backend NO están separados."
+Justificación:
+    1. Arquitectura MVC tradicional: Uso de Servlets + JSP en la misma aplicación web
+    2. Comparten sesión HTTP: Mismo HttpSession para autenticación y datos
+    3. Servlets generan vistas: Los controladores (*Servlet.java) redirigen a JSPs
+    4. JSPs con lógica: Las vistas tienen tags de JSTL que procesan lógica
+    5. Un solo despliegue: Todo va en un mismo .war al servidor Tomcat
+Ejemplo:
+java
+// En ProcesarApuestaServlet:
+apuestaRepo.guardar(apuesta);  // Backend - persistencia
+request.setAttribute("apuesta", apuesta);  // Prepara para frontend
+request.getRequestDispatcher("WEB-INF/jsp/ApuestaCreada.jsp").forward(...);  // Renderiza frontend
+// ↑ Backend y frontend en el MISMO request/response
+Razón válida para este diseño: Es un proyecto académico donde la simplicidad y el desarrollo integral son más importantes que la separación estricta de capas. El patrón MVC clásico de Jakarta EE es adecuado para aplicaciones monoliticas de tamaño moderado como esta aplicación de apuestas.
+) Mostrá un ejemplo de tu aplicación donde se guarden o lean datos de sesión. Explicá cómo se mantiene la información del usuario entre distintas peticiones HTTP.
+RESPUESTA: Manejo de Sesión en la Aplicación de Apuestas
+1) EJEMPLOS CONCRETOS de uso de sesión
+Ejemplo 1: Login - Guardar usuario en sesión
+En IngresoUsuarioServlet.java (o similar):
+java
+public class IngresoUsuarioServlet extends HttpServlet {
+    
+    @Override
+    protected void doPost(HttpServletRequest request, HttpServletResponse response) 
+            throws ServletException, IOException {
+        
+        String usuario = request.getParameter("usuario");
+        String contrasena = request.getParameter("contrasena");
+        
+        // Validar credenciales...
+        UsuarioBase usuarioLogueado = usuarioService.validarLogin(usuario, contrasena);
+        
+        if (usuarioLogueado != null) {
+            // ✅ GUARDAR en SESIÓN
+            HttpSession session = request.getSession();  // Obtener/Crear sesión
+            session.setAttribute("userLogueado", usuarioLogueado);  // Guardar objeto
+            
+            response.sendRedirect("Partidos");  // Redirigir a página principal
+        } else {
+            // Error de login
+            request.setAttribute("hayError", true);
+            request.setAttribute("mensajeError", "Usuario o contraseña incorrectos");
+            request.getRequestDispatcher("WEB-INF/jsp/inicioSesion.jsp").forward(request, response);
+        }
+    }
+}
+Ejemplo 2: Acceder datos de sesión en filtros
+En loginfilter.java:
+java
+public class loginfilter implements Filter {
+    @Override
+    public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) 
+            throws IOException, ServletException {
+        
+        HttpServletRequest httpRequest = (HttpServletRequest) request;
+        HttpServletResponse httpResponse = (HttpServletResponse) response;
+        
+        // ✅ LEER de SESIÓN
+        HttpSession session = httpRequest.getSession(false);  // Obtener sesión existente
+        
+        // Verificar si hay usuario logueado
+        if (session != null && session.getAttribute("userLogueado") != null) {
+            chain.doFilter(request, response);  // Permitir acceso
+        } else {
+            // Redirigir a login si no hay sesión
+            httpResponse.sendRedirect(httpRequest.getContextPath() + "/inicioSesion.jsp");
+        }
+    }
+}
+Ejemplo 3: Usar sesión en Servlets
+En BilleteraServlet.java (tú mismo me pasaste este código):
+java
+public class BilleteraServlet extends HttpServlet {
+    
+    @Override
+    protected void doGet(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        
+        // ✅ LEER usuario de SESIÓN
+        UsuarioBase usuario = (UsuarioBase) request.getSession().getAttribute("userLogueado");
+        
+        if (usuario != null && usuario.puedeGestionarPartidos()) {
+            // Admin redirige a gestión
+            response.sendRedirect(request.getContextPath() + "/Partidos?admin=true");
+            return;
+        }
+        
+        if (!(usuario instanceof Usuario)) {
+            response.sendRedirect(request.getContextPath() + "/Partidos");
+            return;
+        }
+        
+        // Usar datos del usuario de la sesión
+        Usuario usuarioNormal = (Usuario) usuario;
+        int IDusuario = usuarioNormal.getId();  // ID guardado en sesión
+        
+        // Resto de la lógica...
+    }
+}
+Ejemplo 4: Actualizar datos en sesión
+En ProcesarApuestaServlet.java (líneas relevantes):
+java
+// Después de procesar apuesta, ACTUALIZAR sesión
+usuarioNormal.setDinero((int)(saldoActual - monto));  // Actualizar saldo
+
+// ✅ ACTUALIZAR objeto en SESIÓN
+request.getSession().setAttribute("userLogueado", usuarioNormal);
+
+// También en caso de error (líneas ~180):
+private void mostrarError(...) {
+    UsuarioBase usuario = (UsuarioBase) request.getSession().getAttribute("userLogueado");
+    
+    if (usuario instanceof Usuario) {
+        UsuarioService usuarioService = null;
+        try {
+            usuarioService = new UsuarioService();
+            double saldoActual = usuarioService.getDineroPorIdUsuario(usuario.getId());
+            
+            // ✅ ACTUALIZAR saldo en sesión
+            ((Usuario) usuario).setDinero((int) saldoActual);
+            request.getSession().setAttribute("userLogueado", usuario);
+
+2) ¿CÓMO SE MANTIENE la información entre peticiones?
+Mecanismo de sesión HTTP:
+text
+Primera petición (Login):
+Usuario → POST /login → Servlet
+                     ↓
+                 Crea HttpSession (ID único: JSESSIONID)
+                     ↓
+                 Guarda: session.setAttribute("userLogueado", usuario)
+                     ↓
+                 Responde con: Set-Cookie: JSESSIONID=ABC123
+                     
+                     
+Siguientes peticiones:
+Usuario → GET /billetera → Servlet
+         (Cookie: JSESSIONID=ABC123)
+                     ↓
+                 request.getSession() → Recupera sesión con ID ABC123
+                     ↓
+                 Usuario user = (Usuario) session.getAttribute("userLogueado")
+                     ↓
+                 Usa user.getId(), user.getNombre(), etc.
+Visualización del flujo:
+java
+// 1. PRIMERA PETICIÓN (Login)
+HttpSession session = request.getSession();  // Crea nueva sesión
+// Servlet crea: JSESSIONID = ABC123 (aleatorio)
+// Guarda en servidor: Map<"ABC123", sessionData>
+// Responde con cookie: Set-Cookie: JSESSIONID=ABC123
+
+// 2. SEGUNDA PETICIÓN (Billetera)
+// Browser envía: Cookie: JSESSIONID=ABC123
+HttpSession existingSession = request.getSession();  // Recupera con ID ABC123
+Usuario user = (Usuario) existingSession.getAttribute("userLogueado");
+// ¡Tengo todos los datos del usuario!
+
+// 3. MANTENIMIENTO AUTOMÁTICO
+// Tomcat mantiene la sesión por ~30 minutos
+// Cada nueva petición renueva el timeout
+
+3) CONFIGURACIÓN en tu proyecto
+En web.xml:
+xml
+<session-config>
+    <session-timeout>30</session-timeout>  <!-- 30 minutos de inactividad -->
+</session-config>
+Filtros que protegen rutas:
+java
+// En loginfilter.java - Protege rutas que requieren login
+@WebFilter(filterName = "loginfilter", 
+           urlPatterns = {"/Billetera", "/Apuesta", "/ApuestaMostrar", "/Perfil"})
+public class loginfilter implements Filter {
+    // Verifica session.getAttribute("userLogueado")
+}
+
+4) EJEMPLO COMPLETO de flujo de sesión
+Escenario: Usuario apuesta:
+    1. Usuario logueado:
+       java
+       // Sesión guarda: {userLogueado: Usuario{id=5, nombre="Juan", dinero=1000}}
+    2. Hace apuesta de $100:
+       java
+       // En ProcesarApuestaServlet:
+       Usuario usuario = (Usuario) session.getAttribute("userLogueado");
+       int saldoAnterior = usuario.getDinero();  // 1000
+       
+       // Procesa apuesta...
+       usuario.setDinero(saldoAnterior - 100);  // Ahora 900
+       
+       // ✅ ACTUALIZA SESIÓN
+       session.setAttribute("userLogueado", usuario);
+    3. Va a billetera:
+       java
+       // En BilleteraServlet:
+       Usuario mismoUsuario = (Usuario) request.getSession().getAttribute("userLogueado");
+       int saldoActual = mismoUsuario.getDinero();  // ¡Ya es 900!
+       // No necesita consultar la BD porque está en sesión
+
+5) VENTAJAS de usar sesión en tu proyecto
+Lo que ganas:
+    1. Estado mantenido: El usuario permanece logueado mientras navega
+    2. Rendimiento: No consultar BD en cada petición
+    3. Simplicidad: Acceso fácil a datos del usuario en cualquier Servlet
+    4. Seguridad: Filtros validan sesión antes de permitir acceso
+Datos que guardas en sesión (según tu código):
+    • ✅ Objeto Usuario completo (id, nombre, dinero, tipo)
+    • ✅ Estado de autenticación
+    • ✅ Preferencias (si las tuvieras)
+    • ❌ NO guardas datos sensibles como contraseña
+
+6) CÓDIGO de LOGOUT - Destruir sesión
+En Salir.java (si existe, o debería):
+java
+public class Salir extends HttpServlet {
+    
+    @Override
+    protected void doGet(HttpServletRequest request, HttpServletResponse response) 
+            throws ServletException, IOException {
+        
+        // ✅ DESTRUIR SESIÓN
+        HttpSession session = request.getSession(false);
+        if (session != null) {
+            session.invalidate();  // Elimina toda la sesión
+        }
+        
+        // Redirigir a login
+        response.sendRedirect(request.getContextPath() + "/inicioSesion.jsp");
+    }
+}
+
+7) CONCLUSIÓN para el parcial
+Ejemplo concreto para mostrar:
+java
+// En cualquier Servlet:
+public class MiServlet extends HttpServlet {
+    
+    protected void doGet(HttpServletRequest request, HttpServletResponse response) {
+        // 1. OBTENER sesión existente
+        HttpSession session = request.getSession(false);  // false = no crear nueva
+        
+        if (session == null) {
+            // No hay sesión, usuario no logueado
+            response.sendRedirect("login.jsp");
+            return;
+        }
+        
+        // 2. LEER datos de sesión
+        Usuario usuario = (Usuario) session.getAttribute("userLogueado");
+        
+        if (usuario == null) {
+            // Sesión existe pero sin usuario (raro pero posible)
+            session.invalidate();  // Limpiar
+            response.sendRedirect("login.jsp");
+            return;
+        }
+        
+        // 3. USAR datos de sesión
+        String nombre = usuario.getUsuario();
+        int dinero = usuario.getDinero();
+        
+        // 4. ACTUALIZAR sesión si es necesario
+        usuario.setDinero(dinero - 50);  // Ej: restar apuesta
+        session.setAttribute("userLogueado", usuario);  // Guardar cambios
+    }
+}
+Cómo se mantiene entre peticiones:
+    1. Cookie JSESSIONID identifica la sesión del usuario
+    2. Tomcat guarda en memoria los atributos de sesión asociados a ese ID
+    3. Cada petición recupera la sesión usando el JSESSIONID de las cookies
+    4. Timeout de 30 minutos mantiene la sesión activa durante la navegación
+    5. Invalidación manual (session.invalidate()) en logout
+En tu proyecto: Usás sesión extensivamente para autenticación, autorización (filtros), y mantener el estado del usuario (saldo, preferencias) a través de toda la aplicación, siguiendo el patrón estándar de aplicaciones web Jakarta EE.
+4) Listá las capas que componen tu backend e indicá la función de cada una.
+RESPUESTA: Capas del Backend en la Aplicación de Apuestas
+1) ARQUITECTURA EN CAPAS de tu backend
+Tu proyecto sigue un patrón MVC clásico de Jakarta EE con las siguientes capas:
+text
+┌─────────────────────────────────────────────────┐
+│            PRESENTACIÓN (Frontend)              │ ← JSPs (NO es parte del backend)
+├─────────────────────────────────────────────────┤
+│             CONTROLADORES (Servlets)            │ ← Capa 1
+├─────────────────────────────────────────────────┤
+│              SERVICIOS (Lógica)                 │ ← Capa 2  
+├─────────────────────────────────────────────────┤
+│             REPOSITORIOS (Datos)                │ ← Capa 3
+├─────────────────────────────────────────────────┤
+│               MODELOS (Entidades)               │ ← Capa 4
+├─────────────────────────────────────────────────┤
+│           PERSISTENCIA (JPA/Hibernate)          │ ← Capa 5
+└─────────────────────────────────────────────────┘
+
+2) DETALLE DE CADA CAPA
+CAPA 1: CONTROLADORES (Servlets)
+Ubicación: com.mycompany.apuestatodook.*Servlet.java
+    • ApuestaServlet.java
+    • ProcesarApuestaServlet.java
+    • BilleteraServlet.java
+    • PartidosServlet.java
+    • UsuarioNuevoServlet.java
+Función:
+    • Recibir peticiones HTTP del navegador
+    • Extraer parámetros (request.getParameter())
+    • Validar entradas básicas
+    • Orquestar llamadas a servicios
+    • Redirigir a vistas JSP
+    • Manejar sesiones (request.getSession())
+Ejemplo concreto:
+java
+// En ProcesarApuestaServlet.java
+protected void doPost(HttpServletRequest request, HttpServletResponse response) {
+    // 1. Recibe parámetros HTTP
+    int monto = Integer.parseInt(request.getParameter("monto"));
+    int idPartido = Integer.parseInt(request.getParameter("idPartido"));
+    
+    // 2. Obtiene usuario de sesión
+    UsuarioBase usuario = (UsuarioBase) request.getSession().getAttribute("userLogueado");
+    
+    // 3. Llama a servicios (delega lógica)
+    // 4. Prepara respuesta
+    // 5. Redirige a vista
+}
+
+CAPA 2: SERVICIOS (Lógica de Negocio)
+Ubicación: com.mycompany.apuestatodook.model.UsuarioService.java
+Función:
+    • Contener la lógica de negocio principal
+    • Validar reglas del dominio (ej: saldo suficiente)
+    • Coordinar múltiples repositorios
+    • Manejar transacciones complejas
+    • Aplicar cálculos y transformaciones
+Ejemplo concreto:
+java
+// En UsuarioService.java (debe existir o similar)
+public class UsuarioService {
+    public double getDineroPorIdUsuario(int idUsuario) {
+        // Lógica para obtener saldo
+    }
+    
+    public void updateDinero(Usuario usuario) {
+        // Lógica para actualizar saldo con validaciones
+    }
+    
+    // Posiblemente: validarApuesta(), calcularGanancia(), etc.
+}
+Nota: En tu proyecto esta capa está menos desarrollada, ya que mucha lógica está en los Servlets.
+
+CAPA 3: REPOSITORIOS (Acceso a Datos)
+Ubicación: com.mycompany.apuestatodook.model.*Repository.java
+    • ApuestaRepository.java
+    • UsuarioRepository.java (debe existir)
+    • PartidoRepository.java
+    • ResultadoRepository.java
+Función:
+    • Encapsular operaciones de base de datos
+    • Ejecutar consultas JPA/Hibernate
+    • Mapear objetos a tablas
+    • Manejar transacciones a nivel de persistencia
+    • Optimizar queries
+Ejemplo concreto (de tu ApuestaRepository.java):
+java
+public class ApuestaRepository {
+    public void guardar(Apuesta apuesta) {
+        em.getTransaction().begin();
+        em.persist(apuesta);  // Operación de persistencia
+        em.getTransaction().commit();
+    }
+    
+    public List<Apuesta> obtenerPorUsuarioConDetalles(int idUsuario) {
+        // Query compleja con joins
+        TypedQuery<Apuesta> query = em.createQuery(
+            "SELECT a FROM Apuesta a LEFT JOIN FETCH a.partido WHERE a.fkIdUsuario = :idUsuario", 
+            Apuesta.class
+        );
+        return query.getResultList();
+    }
+}
+
+CAPA 4: MODELOS (Entidades/POJOs)
+Ubicación: com.mycompany.apuestatodook.model.*.java
+    • Usuario.java, UsuarioBase.java, Admin.java
+    • Apuesta.java
+    • Partido.java
+    • Resultado.java
+Función:
+    • Representar entidades del dominio
+    • Mapeo objeto-relacional (JPA annotations)
+    • Contener atributos y métodos básicos
+    • Validaciones simples (@NotNull, @Size)
+    • Relaciones entre entidades
+Ejemplo concreto:
+java
+// Ejemplo de entidad Apuesta (debe tener anotaciones JPA)
+@Entity
+@Table(name = "apuesta")
+public class Apuesta {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private int idApuesta;
+    
+    private int monto;
+    private String por_quien;
+    private char estado;
+    
+    @ManyToOne
+    @JoinColumn(name = "fk_id_usuario")
+    private Usuario usuario;
+    
+    // Getters, setters, constructores
+}
+
+CAPA 5: INFRAESTRUCTURA/PERSISTENCIA
+Ubicación:
+    • com.mycompany.apuestatodook.model.EntityManagerUtil.java
+    • src/main/resources/META-INF/persistence.xml
+    • src/main/resources/META-INF/DBConnection.properties
+Función:
+    • Configurar conexión a base de datos
+    • Manejar el EntityManagerFactory
+    • Configurar JPA/Hibernate
+    • Definir pooling de conexiones
+    • Especificar dialecto SQL
+Ejemplo concreto:
+java
+// En EntityManagerUtil.java
+public class EntityManagerUtil {
+    private static final EntityManagerFactory emf;
+    
+    static {
+        // Configuración centralizada de JPA
+        emf = Persistence.createEntityManagerFactory("ApuestaTodoOkPU");
+    }
+    
+    public static EntityManagerFactory getEntityManagerFactory() {
+        return emf;
+    }
+}
+xml
+<!-- En persistence.xml -->
+<persistence-unit name="ApuestaTodoOkPU">
+    <provider>org.hibernate.jpa.HibernatePersistenceProvider</provider>
+    <properties>
+        <property name="javax.persistence.jdbc.url" value="jdbc:mysql://localhost:3306/apuestasdb"/>
+        <property name="javax.persistence.jdbc.user" value="root"/>
+        <property name="hibernate.dialect" value="org.hibernate.dialect.MySQLDialect"/>
+    </properties>
+</persistence-unit>
+
+CAPA ADICIONAL: FILTROS
+Ubicación: com.mycompany.apuestatodook.filtros.*.java
+    • loginfilter.java
+    • AdminFilter.java
+    • UtilFilter.java
+Función:
+    • Interceptar peticiones HTTP
+    • Aplicar seguridad (autenticación/autorización)
+    • Validar sesiones
+    • Logging
+    • Manipular request/response
+Ejemplo concreto:
+java
+// En loginfilter.java
+public void doFilter(...) {
+    HttpSession session = httpRequest.getSession(false);
+    
+    if (session != null && session.getAttribute("userLogueado") != null) {
+        chain.doFilter(request, response);  // Permitir acceso
+    } else {
+        // Redirigir a login - seguridad
+        httpResponse.sendRedirect(httpRequest.getContextPath() + "/inicioSesion.jsp");
+    }
+}
+
+3) FLUJO COMPLETO ENTRE CAPAS
+Ejemplo: Usuario hace una apuesta
+text
+1. PRESENTACIÓN (JSP apuesta.jsp)
+   ↓ (HTTP POST con parámetros)
+   
+2. CONTROLADOR (ProcesarApuestaServlet.doPost())
+   • Valida parámetros básicos
+   • Obtiene usuario de sesión
+   ↓
+   
+3. SERVICIO (UsuarioService)
+   • Valida saldo suficiente
+   • Aplica reglas de negocio
+   ↓
+   
+4. REPOSITORIO (ApuestaRepository.guardar())
+   • Abre transacción JPA
+   • Persiste en base de datos
+   ↓
+   
+5. PERSISTENCIA (JPA/Hibernate)
+   • Genera SQL INSERT
+   • Maneja conexión a MySQL
+   ↓
+   
+6. BASE DE DATOS (MySQL)
+   • Ejecuta transacción
+   • Devuelve resultado
+
+4) RESPONSABILIDADES ESPECÍFICAS de cada capa
+Capa	Responsabilidad	Ejemplo en tu proyecto	Tecnología
+Controladores	Recibir HTTP, validar entradas, orquestar	ProcesarApuestaServlet	Servlets Jakarta EE
+Servicios	Lógica de negocio, validaciones complejas	UsuarioService	Clases Java POJO
+Repositorios	Acceso a datos, queries, transacciones	ApuestaRepository	JPA/Hibernate
+Modelos	Representar entidades, relaciones	Usuario, Apuesta	JPA Annotations
+Infraestructura	Configuración, conexiones, pooling	EntityManagerUtil	persistence.xml
+Filtros	Seguridad, logging, pre/post-procesamiento	loginfilter	Servlet Filters
+
+5) CARACTERÍSTICAS de tu arquitectura
+Fortalezas:
+    1. Separación clara: Cada capa tiene responsabilidad única
+    2. Mantenibilidad: Cambios en una capa afectan mínimamente a otras
+    3. Testeabilidad: Capas pueden probarse separadamente
+    4. Escalabilidad: Puedes añadir más repositorios/servicios fácilmente
+Mejoras posibles:
+    1. Capa de Servicios delgada: Mucha lógica está en Controladores
+    2. DTOs faltantes: Usas entidades JPA directamente en vistas
+    3. Interfaces: No usas interfaces para desacoplar implementaciones
+
+6) CONCLUSIÓN para el parcial
+Las capas de tu backend son:
+    1. Capa de Controladores (Servlets): Puente entre HTTP y lógica de negocio
+    2. Capa de Servicios: Lógica de negocio y validaciones
+    3. Capa de Repositorios: Acceso a datos y persistencia
+    4. Capa de Modelos: Entidades del dominio con JPA
+    5. Capa de Infraestructura: Configuración de JPA y base de datos
+    6. Capa de Filtros: Seguridad y pre-procesamiento HTTP
+Ejemplo de interacción:
+java
+// 1. Controlador (Servlet) recibe petición
+// 2. Llama a Servicio para lógica
+// 3. Servicio usa Repositorio para datos  
+// 4. Repositorio usa JPA/EntityManager
+// 5. JPA persiste en BD usando configuración de persistence.xml
+Ventaja de esta arquitectura:
+    • Cambiar de MySQL a PostgreSQL → Solo modificar persistence.xml
+    • Cambiar lógica de apuestas → Solo modificar UsuarioService
+    • Cambiar interfaz web → Los Servlets siguen igual (API consistente)
+Tu proyecto implementa una arquitectura en capas clásica de Jakarta EE, adecuada para aplicaciones web de complejidad moderada como un sistema de apuestas, manteniendo buena separación de preocupaciones y facilitando el mantenimiento.
+5)Mostrar un lugar de tu backend donde se reciban parámetros de ruta (route params) y otra donde se reciban parámetros de consulta (query params). Colocar una URL de ejemplo que aplique en cada uno de los casos.
+RESPUESTA: Parámetros de Ruta vs Parámetros de Consulta
+1) PARÁMETROS DE CONSULTA (QUERY PARAMS) - SÍ TIENES
+Ejemplo en tu código: PartidosServlet.java
+java
+// En PartidosServlet (debe existir o similar en tu proyecto)
+public class PartidosServlet extends HttpServlet {
+    
+    @Override
+    protected void doGet(HttpServletRequest request, HttpServletResponse response) 
+            throws ServletException, IOException {
+        
+        // ✅ PARÁMETROS DE CONSULTA (QUERY PARAMS)
+        String adminParam = request.getParameter("admin");
+        String eliminarParam = request.getParameter("eliminar");
+        
+        // Verificar si es modo administrador
+        if ("true".equals(adminParam)) {
+            request.setAttribute("esAdmin", true);
+            // Lógica para administrador...
+        }
+        
+        // Verificar si hay que eliminar un partido
+        if (eliminarParam != null) {
+            int idPartido = Integer.parseInt(eliminarParam);
+            // Lógica para eliminar partido...
+        }
+        
+        // Obtener lista de partidos
+        List<Partido> partidos = partidoRepo.obtenerTodos();
+        request.setAttribute("listaDePartidos", partidos);
+        
+        request.getRequestDispatcher("WEB-INF/jsp/partidos.jsp").forward(request, response);
+    }
+}
+URL de ejemplo con Query Params:
+text
+http://localhost:8080/ApuestaTodook/Partidos?admin=true&eliminar=5
+    • ? indica inicio de parámetros de consulta
+    • admin=true → parámetro admin con valor true
+    • & separa múltiples parámetros
+    • eliminar=5 → parámetro eliminar con valor 5
+Otro ejemplo en tu código: Filtros
+java
+// En loginfilter.java o similar
+public void doFilter(...) {
+    // Los parámetros de consulta también están disponibles aquí
+    String action = httpRequest.getParameter("action");
+    String id = httpRequest.getParameter("id");
+}
+
+2) PARÁMETROS DE RUTA (ROUTE PARAMS) - NO TIENES EN FORMA NATIVA
+¿Por qué no tienes Route Params?
+Tu proyecto usa el patrón clásico de Servlets donde las URLs se mapean así en web.xml:
+xml
+<servlet-mapping>
+    <servlet-name>ApuestaServlet</servlet-name>
+    <url-pattern>/Apuesta</url-pattern>  ← URL fija, sin parámetros en ruta
+</servlet-mapping>
+Las tecnologías que SÍ usan Route Params:
+    • Spring MVC: @GetMapping("/partidos/{id}")
+    • JAX-RS (Jersey): @Path("/partidos/{id}")
+    • Express.js: app.get('/partidos/:id', ...)
+Pero tienes un PATRÓN SIMILAR: ApuestaServlet.java
+java
+// En ApuestaServlet.java (debe existir)
+public class ApuestaServlet extends HttpServlet {
+    
+    @Override
+    protected void doGet(HttpServletRequest request, HttpServletResponse response) 
+            throws ServletException, IOException {
+        
+        // ✅ SIMULACIÓN DE PARÁMETRO DE RUTA mediante Query Param
+        String idParam = request.getParameter("id");
+        // Esto parece query param pero actúa como route param
+        
+        if (idParam != null && !idParam.trim().isEmpty()) {
+            try {
+                int idPartido = Integer.parseInt(idParam);
+                
+                // Obtener partido por ID
+                PartidoRepository repo = new PartidoRepository();
+                Partido partido = repo.obtenerPorId(idPartido);
+                
+                if (partido != null) {
+                    request.setAttribute("partido", partido);
+                    request.getRequestDispatcher("WEB-INF/jsp/apuesta.jsp").forward(request, response);
+                } else {
+                    // Error: partido no encontrado
+                }
+                repo.close();
+                
+            } catch (NumberFormatException e) {
+                // Error: ID inválido
+            }
+        } else {
+            // Error: falta ID
+        }
+    }
+}
+URL que usas (pero es Query Param disfrazado):
+text
+http://localhost:8080/ApuestaTodook/Apuesta?id=7
+    • Técnicamente es query param (?id=7)
+    • Pero conceptualmente actúa como route param porque identifica el recurso
+
+3) COMPARACIÓN DIRECTA en tu proyecto
+Query Params (SÍ tienes):
+java
+// En partidos.jsp - link que genera query params
+<a href="/ApuestaTodook/Partidos?admin=true&eliminar=${partido.idPartido}">
+    Eliminar
+</a>
+
+// En el Servlet:
+String admin = request.getParameter("admin");  // "true"
+String eliminar = request.getParameter("eliminar");  // "5"
+Route Params (NO tienes nativos, pero simulas):
+java
+// En partidos.jsp - link que simula route param
+<a href="/ApuestaTodook/Apuesta?id=${partido.idPartido}">
+    Apostar
+</a>
+
+// En ApuestaServlet:
+String id = request.getParameter("id");  // Obtienes como query param
+
+4) DIFERENCIA CONCEPTUAL
+URLs REALES de tu aplicación:
+Tipo	URL Ejemplo	¿Para qué?	Cómo se obtiene en Servlet
+Query Params	/Partidos?admin=true	Modo administrador	request.getParameter("admin")
+Query Params	/Partidos?eliminar=5	Eliminar partido 5	request.getParameter("eliminar")
+"Route Params"	/Apuesta?id=7	Apostar en partido 7	request.getParameter("id")
+Sin parámetros	/Billetera	Ver billetera	No hay parámetros
+
+5) CÓMO SERÍAN LOS ROUTE PARAMS REALES
+Si usaras Spring MVC (pero NO lo usas):
+java
+// Esto NO está en tu proyecto, es ejemplo de cómo sería
+@Controller
+public class PartidoController {
+    
+    // ✅ ROUTE PARAM real
+    @GetMapping("/partidos/{id}")
+    public String verPartido(@PathVariable("id") int idPartido, Model model) {
+        // idPartido viene de la URL: /partidos/7
+    }
+    
+    // ✅ QUERY PARAM 
+    @GetMapping("/partidos")
+    public String listarPartidos(@RequestParam(value = "admin", required = false) Boolean esAdmin, Model model) {
+        // esAdmin viene de: /partidos?admin=true
+    }
+}
+URLs correspondientes:
+    • Route Param: http://localhost:8080/partidos/7
+    • Query Param: http://localhost:8080/partidos?admin=true
+
+6) EJEMPLOS CONCRETOS de tu JSP
+En partidos.jsp:
+jsp
+<!-- QUERY PARAMS para administrador -->
+<a href="${pageContext.request.contextPath}/Partidos?admin=true&eliminar=${partido.idPartido}" 
+   class="btn btn-danger btn-sm">
+   Eliminar
+</a>
+
+<!-- "ROUTE PARAM" simulado (en realidad query param) -->
+<a class="btn btn-success" href="/ApuestaTodook/Apuesta?id=${partido.idPartido}">
+   Apostar
+</a>
+En ApuestaServlet (manejo del "route param" simulado):
+java
+public class ApuestaServlet extends HttpServlet {
+    protected void doGet(HttpServletRequest request, HttpServletResponse response) {
+        // Obtiene el ID como query param, pero lo usa como identificador de recurso
+        String idStr = request.getParameter("id");  // Ej: "7" de /Apuesta?id=7
+        
+        if (idStr == null) {
+            // Error: no se especificó partido
+            response.sendRedirect("Partidos");
+            return;
+        }
+        
+        int idPartido = Integer.parseInt(idStr);
+        // Ahora tienes el ID del partido para mostrar el formulario de apuesta
+    }
+}
+
+7) CONCLUSIÓN para el parcial
+Para responder:
+1. Parámetros de Consulta (Query Params) - SÍ tienes:
+java
+// En PartidosServlet
+String admin = request.getParameter("admin");  // Obtiene ?admin=true
+String eliminar = request.getParameter("eliminar");  // Obtiene ?eliminar=5
+
+// URL de ejemplo:
+// http://localhost:8080/ApuestaTodook/Partidos?admin=true&eliminar=5
+2. Parámetros de Ruta (Route Params) - NO tienes nativos:
+    • Tu proyecto usa Servlets clásicos que no soportan route params como /{id}
+    • Pero simulas el comportamiento con query params:
+java
+// En ApuestaServlet  
+String id = request.getParameter("id");  // Obtiene ?id=7
+
+// URL que usas (simula route param):
+// http://localhost:8080/ApuestaTodook/Apuesta?id=7
+Diferencia clave:
+    • Query Params: ?clave=valor&clave2=valor2 → para filtros, opciones, configuraciones
+    • Route Params: /recurso/{id} → para identificar recursos específicos (en tu caso, lo simulas con query params)
+En la práctica de tu proyecto:
+    • Usas query params reales para: modo admin (?admin=true), acciones (?eliminar=5)
+    • Usas query params como route params para: identificar partidos (?id=7)
+Esta es una limitación/rasgo del stack tecnológico elegido (Servlets Jakarta EE). Frameworks modernos como Spring Boot permiten route params nativos, pero para un proyecto académico con Servlets, tu aproximación es válida y común.
